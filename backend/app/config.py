@@ -1,10 +1,6 @@
-import logging
 import os
 from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-# 配置日志记录
-logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class Settings(BaseSettings):
     """
@@ -52,8 +48,5 @@ class Settings(BaseSettings):
 # 创建一个全局可用的配置实例
 settings = Settings()
 
-# 获取一个logger实例
-logger = logging.getLogger(__name__)
-logger.setLevel(settings.LOG_LEVEL)
-
-logger.info("配置加载完成。")
+# 注意：logger现在在observability.logger中统一管理
+# 这里不再创建logger，避免重复初始化

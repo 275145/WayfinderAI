@@ -4,22 +4,32 @@ export interface Location {
   lng: number
 }
 
+// --- 核心业务模型 ---
+
+// 与后端 Attraction 模型对齐
 export interface Attraction {
   name: string
+  type: string
+  rating: number | string
+  suggested_duration_hours?: number | null
+  description: string
   address: string
   location?: Location
-  rating: number | string
-  type: string
+  image_urls: string[]
+  ticket_price: number | string
 }
 
+// 与后端 Hotel 模型对齐
 export interface Hotel {
   name: string
   address: string
   location?: Location
   price: number | string
   rating: number | string
+  distance_to_main_attraction_km?: number | null
 }
 
+// 与后端 Dining 模型对齐
 export interface Dining {
   name: string
   address: string
@@ -34,6 +44,8 @@ export interface Weather {
   night_weather: string
   day_temp: string
   night_temp: string
+  day_wind?: string | null
+  night_wind?: string | null
 }
 
 // 行程规划请求模型
@@ -46,29 +58,39 @@ export interface TripPlanRequest {
   budget: string
 }
 
-// 活动模型
-export interface Activity {
-  time: string
-  type: string
-  name: string
-  details: string
-  cost: number
-  location?: Location
-  image_url?: string  // 景点图片URL
+// 预算拆分（与后端 BudgetBreakdown 对齐）
+export interface BudgetBreakdown {
+  transport_cost: number
+  dining_cost: number
+  hotel_cost: number
+  attraction_ticket_cost: number
+  total: number
 }
 
-// 每日行程计划
+// 单日预算（与后端 DailyBudget 对齐）
+export interface DailyBudget {
+  transport_cost: number
+  dining_cost: number
+  hotel_cost: number
+  attraction_ticket_cost: number
+  total: number
+}
+
+// 每日行程计划（与后端 DailyPlan 对齐）
 export interface DailyPlan {
   day: number
   theme: string
   weather?: Weather
-  activities: Activity[]
+  recommended_hotel?: Hotel | null
+  attractions: Attraction[]
+  dinings: Dining[]
+  budget: DailyBudget
 }
 
-// 行程规划响应模型
+// 行程规划响应模型（与后端 TripPlanResponse 对齐）
 export interface TripPlanResponse {
   trip_title: string
-  total_budget: number
+  total_budget: BudgetBreakdown
   hotels: Hotel[]
   days: DailyPlan[]
 }
@@ -82,7 +104,7 @@ export interface TripFormData {
   budget: string
 }
 
-// 预算明细类型
+// 预算明细类型（前端展示用）
 export interface BudgetDetail {
   category: string
   amount: number
@@ -90,6 +112,15 @@ export interface BudgetDetail {
     name: string
     cost: number
   }[]
+}
+
+// 地图点位类型（前端内部使用，用于 MapView 展示行程）
+export interface MapPoint {
+  name: string
+  type: 'attraction' | 'dining' | 'hotel' | 'transport' | string
+  description?: string
+  cost?: number
+  location?: Location
 }
 
 // 导出选项类型

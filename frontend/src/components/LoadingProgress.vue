@@ -7,6 +7,10 @@
     width="500px"
     align-center
   >
+    <!-- 关闭按钮 -->
+    <div class="close-button" @click="handleCancel">
+      <el-icon><Close /></el-icon>
+    </div>
     <div class="loading-container">
       <!-- 动画图标 -->
       <div class="loading-icon">
@@ -29,7 +33,7 @@
           :color="progressColors"
           :show-text="false"
         />
-        <div class="progress-text">{{ progress }}%</div>
+        <!-- 不显示实时进度百分比 -->
       </div>
 
       <!-- 状态步骤 -->
@@ -55,7 +59,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { InfoFilled } from '@element-plus/icons-vue'
+import { InfoFilled, Close } from '@element-plus/icons-vue'
 
 interface Props {
   visible: boolean
@@ -70,6 +74,7 @@ interface LoadingStatus {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:visible': [value: boolean]
+  'cancel': []
 }>()
 // 【新增】创建一个可写的计算属性代理
 const dialogVisible = computed({
@@ -135,20 +140,37 @@ const updateRandomTip = () => {
   randomTip.value = tips[Math.floor(Math.random() * tips.length)]
 }
 
-// 模拟进度增长
+// 模拟进度增长 - 均匀加载并模拟各个阶段
 const startProgress = () => {
   progress.value = 0
   activeStep.value = 0
   
-  // 进度条动画
+  // 定义各个阶段的进度范围和速度
+  const stages = [
+    { min: 0, max: 25, step: 0.5, interval: 150 },    // 分析需求阶段
+    { min: 25, max: 50, step: 0.4, interval: 200 },   // 查询信息阶段
+    { min: 50, max: 75, step: 0.35, interval: 250 },  // 智能规划阶段
+    { min: 75, max: 90, step: 0.3, interval: 300 },   // 优化方案阶段
+    { min: 90, max: 95, step: 0.2, interval: 400 }    // 等待完成阶段
+  ]
+  
+  let currentStageIndex = 0
+  
+  // 进度条动画 - 分阶段均匀增长
   progressInterval.value = window.setInterval(() => {
-    if (progress.value < 95) {
-      // 使用非线性增长，开始快，后面慢
-      const increment = Math.max(1, (100 - progress.value) / 20)
-      progress.value = Math.min(95, progress.value + increment)
+    if (currentStageIndex < stages.length) {
+      const stage = stages[currentStageIndex]
       
-      // 更新步骤
-      activeStep.value = currentStatus.value.step
+      if (progress.value < stage.max) {
+        progress.value = Math.min(stage.max, progress.value + stage.step)
+        
+        // 更新步骤（根据进度映射到对应的step）
+        const stepIndex = Math.floor((progress.value / 100) * (steps.length - 1))
+        activeStep.value = Math.min(stepIndex, steps.length - 1)
+      } else {
+        // 进入下一阶段
+        currentStageIndex++
+      }
     }
   }, 200)
 
@@ -192,6 +214,13 @@ onUnmounted(() => {
   stopProgress()
 })
 
+// 处理取消操作
+const handleCancel = () => {
+  stopProgress()
+  emit('cancel')
+  emit('update:visible', false)
+}
+
 defineExpose({
   completeProgress
 })
@@ -232,13 +261,6 @@ defineExpose({
   .progress-wrapper {
     margin-bottom: 30px;
     position: relative;
-    
-    .progress-text {
-      margin-top: 8px;
-      font-size: 18px;
-      font-weight: bold;
-      color: #6366f1;
-    }
   }
 
   .steps-wrapper {
@@ -286,6 +308,37 @@ defineExpose({
 
 :deep(.el-dialog__body) {
   padding: 0;
+  position: relative;
+}
+
+.close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.1);
+    transform: scale(1.1);
+  }
+  
+  .el-icon {
+    font-size: 18px;
+    color: #909399;
+  }
+  
+  &:hover .el-icon {
+    color: #303133;
+  }
 }
 
 :deep(.el-step__title) {

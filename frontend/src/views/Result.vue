@@ -25,7 +25,7 @@
                   </span>
                   <span class="meta-item">
                     <el-icon><Wallet /></el-icon>
-                    预算：¥{{ tripPlan.total_budget }}
+                    预算：¥{{ tripPlan.total_budget.total }}
                   </span>
                 </div>
               </div>
@@ -50,10 +50,10 @@
             <template #header>
               <div class="card-header-custom">
                 <h3>📍 行程地图</h3>
-                <el-tag type="success" size="small">{{ allActivities.length }} 个地点</el-tag>
+                <el-tag type="success" size="small">{{ allPoints.length }} 个地点</el-tag>
               </div>
             </template>
-            <MapView :activities="allActivities" :center="mapCenter" />
+            <MapView :points="allPoints" :center="mapCenter" />
           </el-card>
 
           <!-- 每日行程 -->
@@ -67,39 +67,80 @@
               <div class="day-header">
                 <div class="day-info">
                   <div class="day-badge">第 {{ day.day }} 天</div>
-                  <div class="day-content">
-                    <h3>{{ day.theme }}</h3>
-                    <div class="weather-info" v-if="day.weather">
-                      <span class="weather-item">
-                        <el-icon><Sunny /></el-icon>
-                        {{ day.weather.day_weather }}
-                      </span>
-                      <span class="weather-item">
-                        <el-icon><Thermometer /></el-icon>
-                        {{ day.weather.day_temp }}°C / {{ day.weather.night_temp }}°C
-                      </span>
+                    <div class="day-content">
+                      <h3>{{ day.theme }}</h3>
+                      <div class="weather-info" v-if="day.weather">
+                        <span class="weather-item">
+                          <el-icon><Sunny /></el-icon>
+                          {{ day.weather.day_weather }} / {{ day.weather.night_weather }}
+                        </span>
+                        <span class="weather-item">
+                          温度：{{ day.weather.day_temp }}°C / {{ day.weather.night_temp }}°C
+                        </span>
+                        <span
+                          class="weather-item"
+                          v-if="day.weather.day_wind || day.weather.night_wind"
+                        >
+                          风向风力：
+                          <template v-if="day.weather.day_wind">
+                            白天 {{ day.weather.day_wind }}
+                          </template>
+                          <template v-if="day.weather.night_wind">
+                            ，夜间 {{ day.weather.night_wind }}
+                          </template>
+                        </span>
+                      </div>
                     </div>
-                  </div>
                 </div>
               </div>
             </template>
 
-            <!-- 活动时间轴 -->
+            <!-- 推荐住宿 -->
+            <div v-if="day.recommended_hotel" class="recommended-hotel">
+              <el-card shadow="never">
+                <div class="recommended-hotel-content">
+                  <div class="hotel-icon">🏨</div>
+                  <div class="hotel-info">
+                    <h4>推荐住宿：{{ day.recommended_hotel.name }}</h4>
+                    <p class="hotel-address">
+                      <el-icon><Location /></el-icon>
+                      {{ day.recommended_hotel.address }}
+                    </p>
+                    <div class="hotel-meta">
+                      <span v-if="day.recommended_hotel.distance_to_main_attraction_km != null">
+                        距主要景点约 {{ day.recommended_hotel.distance_to_main_attraction_km }} km
+                      </span>
+                      <span v-if="day.budget.hotel_cost > 0" class="cost">
+                        酒店预算：¥{{ day.budget.hotel_cost.toFixed(2) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </el-card>
+            </div>
+
+            <!-- 景点列表 -->
+            <div class="section-title">
+              <h4>🎯 景点安排</h4>
+              <span class="section-subtitle">共 {{ day.attractions.length }} 个景点</span>
+            </div>
+
             <el-timeline class="activity-timeline">
               <el-timeline-item
-                v-for="(activity, index) in day.activities"
-                :key="index"
-                :timestamp="activity.time"
+                v-for="(attraction, index) in day.attractions"
+                :key="`attraction-${index}`"
+                :timestamp="`第 ${index + 1} 站`"
                 placement="top"
-                :color="getActivityColor(activity.type)"
+                :color="getActivityColor('attraction')"
               >
-                <el-card class="activity-card" :class="{ 'has-image': activity.image_url }">
+                <el-card class="activity-card" :class="{ 'has-image': attraction.image_urls && attraction.image_urls.length > 0 }">
                   <div class="activity-content">
-                    <!-- 左侧：图片 -->
-                    <div class="activity-image" v-if="activity.image_url">
+                    <!-- 左侧：图片，优先使用景点图片，缺失时显示默认图 -->
+                    <div class="activity-image">
+                      <div class="attraction-number-badge">{{ index + 1 }}</div>
                       <el-image
-                        :src="activity.image_url"
-                        :alt="activity.name"
+                        :src="attraction.image_urls && attraction.image_urls.length > 0 ? attraction.image_urls[0] : DEFAULT_ATTRACTION_IMAGE"
+                        :alt="attraction.name"
                         fit="cover"
                         lazy
                       >
@@ -109,8 +150,8 @@
                           </div>
                         </template>
                         <template #error>
-                          <div class="image-error">
-                            <el-icon><Picture /></el-icon>
+                          <div class="image-error image-fallback">
+                            <!-- 默认景点图片 -->
                           </div>
                         </template>
                       </el-image>
@@ -118,13 +159,18 @@
 
                     <!-- 右侧：内容 -->
                     <div class="activity-main">
-                      <div class="activity-icon">{{ getActivityIcon(activity.type) }}</div>
+                      <div class="activity-icon">{{ getActivityIcon('attraction') }}</div>
                       <div class="activity-info">
-                        <h4>{{ activity.name }}</h4>
-                        <p class="activity-details">{{ activity.details }}</p>
+                        <h4>{{ attraction.name }}</h4>
+                        <p class="activity-details">{{ attraction.description }}</p>
                         <div class="activity-meta">
-                          <el-tag size="small">{{ getActivityTypeText(activity.type) }}</el-tag>
-                          <span v-if="activity.cost > 0" class="cost">¥{{ activity.cost }}</span>
+                          <el-tag size="small">景点 · {{ attraction.type }}</el-tag>
+                          <span v-if="attraction.ticket_price && attraction.ticket_price !== 'N/A'" class="cost">
+                            门票：¥{{ attraction.ticket_price }}
+                          </span>
+                          <span v-if="attraction.suggested_duration_hours" class="duration">
+                            建议游玩：{{ attraction.suggested_duration_hours }} 小时
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -132,6 +178,39 @@
                 </el-card>
               </el-timeline-item>
             </el-timeline>
+
+            <!-- 餐饮列表 -->
+            <div class="section-title" v-if="day.dinings && day.dinings.length > 0">
+              <h4>🍽️ 餐饮推荐</h4>
+              <span class="section-subtitle">共 {{ day.dinings.length }} 家餐厅</span>
+            </div>
+            <div v-if="day.dinings && day.dinings.length > 0" class="dining-list">
+              <el-card
+                v-for="(dining, index) in day.dinings"
+                :key="`dining-${index}`"
+                class="dining-card"
+                shadow="never"
+              >
+                <div class="dining-content">
+                  <div class="dining-icon">{{ getActivityIcon('dining') }}</div>
+                  <div class="dining-info">
+                    <h4>{{ dining.name }}</h4>
+                    <p class="dining-address">
+                      <el-icon><Location /></el-icon>
+                      {{ dining.address }}
+                    </p>
+                    <div class="dining-meta">
+                      <span v-if="dining.cost_per_person && dining.cost_per_person !== 'N/A'">
+                        人均：¥{{ dining.cost_per_person }}
+                      </span>
+                      <span v-if="dining.rating && dining.rating !== 'N/A'">
+                        评分：{{ dining.rating }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </el-card>
+            </div>
           </el-card>
         </el-col>
 
@@ -209,17 +288,20 @@ import {
   Wallet, 
   Location, 
   Sunny, 
-  Thermometer,
   Check 
 } from '@element-plus/icons-vue'
 import MapView from '@/components/MapView.vue'
 import BudgetSummary from '@/components/BudgetSummary.vue'
 import ExportButtons from '@/components/ExportButtons.vue'
-import type { TripPlanResponse, Activity, Location as LocationType } from '@/types'
+import type { TripPlanResponse, MapPoint, Location as LocationType } from '@/types'
 
 const router = useRouter()
 const contentRef = ref<HTMLElement>()
 const tripPlan = ref<TripPlanResponse | null>(null)
+
+// 默认景点图片（当无法获取真实图片时使用）
+const DEFAULT_ATTRACTION_IMAGE =
+  'https://images.unsplash.com/photo-1508261306211-45a1c5c2a5c5?auto=format&fit=crop&w=900&q=80'
 
 // 旅行贴士列表
 const tips = [
@@ -234,12 +316,22 @@ const tips = [
 // 数据清理函数，确保经纬度是数字
 const sanitizeTripPlan = (plan: TripPlanResponse): TripPlanResponse => {
   plan.days.forEach(day => {
-    day.activities.forEach(activity => {
-      if (activity.location) {
-        activity.location.lat = parseFloat(activity.location.lat as any)
-        activity.location.lng = parseFloat(activity.location.lng as any)
+    day.attractions.forEach(attraction => {
+      if (attraction.location) {
+        attraction.location.lat = parseFloat(attraction.location.lat as any)
+        attraction.location.lng = parseFloat(attraction.location.lng as any)
       }
     })
+    day.dinings.forEach(dining => {
+      if (dining.location) {
+        dining.location.lat = parseFloat(dining.location.lat as any)
+        dining.location.lng = parseFloat(dining.location.lng as any)
+      }
+    })
+    if (day.recommended_hotel?.location) {
+      day.recommended_hotel.location.lat = parseFloat(day.recommended_hotel.location.lat as any)
+      day.recommended_hotel.location.lng = parseFloat(day.recommended_hotel.location.lng as any)
+    }
   })
   if (plan.hotels) {
     plan.hotels.forEach(hotel => {
@@ -278,19 +370,48 @@ onMounted(() => {
   }
 })
 
-// 获取所有活动用于地图展示
-const allActivities = computed(() => {
+// 获取所有点位用于地图展示（景点 + 餐饮 + 酒店）
+const allPoints = computed<MapPoint[]>(() => {
   if (!tripPlan.value) return []
-  return tripPlan.value.days.flatMap(day => day.activities)
+
+  const points: MapPoint[] = []
+
+  tripPlan.value.days.forEach(day => {
+    day.attractions.forEach(attraction => {
+      points.push({
+        name: attraction.name,
+        type: 'attraction',
+        description: attraction.description,
+        location: attraction.location
+      })
+    })
+    day.dinings.forEach(dining => {
+      points.push({
+        name: dining.name,
+        type: 'dining',
+        description: dining.address,
+        location: dining.location
+      })
+    })
+    if (day.recommended_hotel?.location) {
+      points.push({
+        name: day.recommended_hotel.name,
+        type: 'hotel',
+        description: day.recommended_hotel.address,
+        location: day.recommended_hotel.location
+      })
+    }
+  })
+
+  return points.filter(p => p.location)
 })
 
 // 计算地图中心点
 const mapCenter = computed((): LocationType | undefined => {
-  const activities = allActivities.value.filter(a => a.location)
-  if (activities.length === 0) return undefined
-  
-  const firstActivity = activities[0]
-  return firstActivity.location
+  const points = allPoints.value.filter(p => p.location)
+  if (points.length === 0) return undefined
+
+  return points[0].location
 })
 
 // 获取活动类型颜色
@@ -313,17 +434,6 @@ const getActivityIcon = (type: string): string => {
     transport: '🚗'
   }
   return iconMap[type] || '📍'
-}
-
-// 获取活动类型文本
-const getActivityTypeText = (type: string): string => {
-  const typeMap: Record<string, string> = {
-    attraction: '景点',
-    dining: '餐饮',
-    hotel: '酒店',
-    transport: '交通'
-  }
-  return typeMap[type] || type
 }
 
 // 返回首页
@@ -593,6 +703,26 @@ const goEdit = () => {
               border-radius: 12px;
               overflow: hidden;
               box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+              position: relative;
+
+              .attraction-number-badge {
+                position: absolute;
+                top: 8px;
+                left: 8px;
+                z-index: 10;
+                width: 28px;
+                height: 28px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 14px;
+                font-weight: bold;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                border: 2px solid white;
+              }
 
               :deep(.el-image) {
                 width: 100%;
@@ -609,6 +739,12 @@ const goEdit = () => {
                 background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
                 color: #909399;
                 font-size: 32px;
+              }
+
+              .image-fallback {
+                background-image: url('https://images.unsplash.com/photo-1508261306211-45a1c5c2a5c5?auto=format&fit=crop&w=900&q=80');
+                background-size: cover;
+                background-position: center;
               }
             }
 

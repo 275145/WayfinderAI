@@ -77,80 +77,79 @@ interface Props {
 const props = defineProps<Props>()
 const activeCollapse = ref<string[]>([])
 
-// 计算总预算
-const totalBudget = computed(() => props.tripPlan.total_budget || 0)
+// 计算总预算（后端已给出拆分字段和 total）
+const totalBudget = computed(() => props.tripPlan.total_budget?.total || 0)
 
-// 计算各类别预算
+// 计算各类别预算（直接使用后端拆分好的字段，并按天拆成明细项）
 const budgetDetails = computed((): BudgetDetail[] => {
   const details: BudgetDetail[] = []
-  
+
+  const total = props.tripPlan.total_budget
+
   // 1. 景点门票费用
-  const attractionCost = props.tripPlan.days.reduce((sum, day) => {
-    return sum + day.activities
-      .filter(act => act.type === 'attraction')
-      .reduce((s, act) => s + (act.cost || 0), 0)
-  }, 0)
-  
-  if (attractionCost > 0) {
-    const attractionItems = props.tripPlan.days.flatMap(day =>
-      day.activities
-        .filter(act => act.type === 'attraction' && act.cost > 0)
-        .map(act => ({ name: act.name, cost: act.cost }))
-    )
+  if (total.attraction_ticket_cost > 0) {
+    const attractionItems: BudgetDetail['items'] = props.tripPlan.days
+      .filter(day => day.budget.attraction_ticket_cost > 0)
+      .map(day => ({
+        name: `第 ${day.day} 天景点门票`,
+        cost: day.budget.attraction_ticket_cost
+      }))
+
     details.push({
       category: '景点门票',
-      amount: attractionCost,
-      items: attractionItems
+      amount: total.attraction_ticket_cost,
+      items: attractionItems.length ? attractionItems : [{ name: '景点门票合计', cost: total.attraction_ticket_cost }]
     })
   }
-  
+
   // 2. 餐饮费用
-  const diningCost = props.tripPlan.days.reduce((sum, day) => {
-    return sum + day.activities
-      .filter(act => act.type === 'dining')
-      .reduce((s, act) => s + (act.cost || 0), 0)
-  }, 0)
-  
-  if (diningCost > 0) {
-    const diningItems = props.tripPlan.days.flatMap(day =>
-      day.activities
-        .filter(act => act.type === 'dining' && act.cost > 0)
-        .map(act => ({ name: act.name, cost: act.cost }))
-    )
+  if (total.dining_cost > 0) {
+    const diningItems: BudgetDetail['items'] = props.tripPlan.days
+      .filter(day => day.budget.dining_cost > 0)
+      .map(day => ({
+        name: `第 ${day.day} 天餐饮`,
+        cost: day.budget.dining_cost
+      }))
+
     details.push({
       category: '餐饮美食',
-      amount: diningCost,
-      items: diningItems
+      amount: total.dining_cost,
+      items: diningItems.length ? diningItems : [{ name: '餐饮合计', cost: total.dining_cost }]
     })
   }
-  
+
   // 3. 酒店住宿费用
-  const hotelCost = props.tripPlan.hotels.reduce((sum, hotel) => {
-    const price = typeof hotel.price === 'number' ? hotel.price : 0
-    return sum + price
-  }, 0)
-  
-  if (hotelCost > 0) {
-    const hotelItems = props.tripPlan.hotels
-      .filter(h => typeof h.price === 'number' && h.price > 0)
-      .map(h => ({ name: h.name, cost: h.price as number }))
+  if (total.hotel_cost > 0) {
+    const hotelItems: BudgetDetail['items'] = props.tripPlan.days
+      .filter(day => day.budget.hotel_cost > 0)
+      .map(day => ({
+        name: `第 ${day.day} 天酒店`,
+        cost: day.budget.hotel_cost
+      }))
+
     details.push({
       category: '酒店住宿',
-      amount: hotelCost,
-      items: hotelItems
+      amount: total.hotel_cost,
+      items: hotelItems.length ? hotelItems : [{ name: '酒店合计', cost: total.hotel_cost }]
     })
   }
-  
-  // 4. 其他费用
-  const otherCost = totalBudget.value - attractionCost - diningCost - hotelCost
-  if (otherCost > 0) {
+
+  // 4. 交通费用
+  if (total.transport_cost > 0) {
+    const transportItems: BudgetDetail['items'] = props.tripPlan.days
+      .filter(day => day.budget.transport_cost > 0)
+      .map(day => ({
+        name: `第 ${day.day} 天交通`,
+        cost: day.budget.transport_cost
+      }))
+
     details.push({
-      category: '交通及其他',
-      amount: otherCost,
-      items: [{ name: '预估费用', cost: otherCost }]
+      category: '交通费用',
+      amount: total.transport_cost,
+      items: transportItems.length ? transportItems : [{ name: '交通合计', cost: total.transport_cost }]
     })
   }
-  
+
   return details
 })
 
@@ -160,7 +159,7 @@ const budgetCategories = computed(() => {
     { name: '景点', icon: '🎫', key: '景点门票' },
     { name: '餐饮', icon: '🍽️', key: '餐饮美食' },
     { name: '住宿', icon: '🏨', key: '酒店住宿' },
-    { name: '其他', icon: '🚗', key: '交通及其他' }
+    { name: '交通', icon: '🚗', key: '交通费用' }
   ]
   
   return categories.map(cat => {

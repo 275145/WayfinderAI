@@ -189,7 +189,8 @@
     <!-- 加载进度弹窗 -->
     <LoadingProgress 
       ref="loadingProgressRef"
-      v-model:visible="loadingProgressVisible" 
+      v-model:visible="loadingProgressVisible"
+      @cancel="handleCancelRequest"
     />
   </div>
 </template>
@@ -199,6 +200,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Location, Search } from '@element-plus/icons-vue'
+import axios from 'axios'
 import { tripApi } from '@/services/api'
 import LoadingProgress from '@/components/LoadingProgress.vue'
 import type { TripFormData, TripPlanRequest } from '@/types'
@@ -209,6 +211,7 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 const loadingProgressVisible = ref(false)
 const loadingProgressRef = ref<InstanceType<typeof LoadingProgress>>()
+const cancelTokenSource = ref<{ cancel: (message?: string) => void } | null>(null)
 
 // 表单数据
 const formData = reactive<TripFormData>({
@@ -244,6 +247,7 @@ const examples = [
       destination: '北京',
       days: 3,
       preferences: ['历史', '美食'],
+      hotelPreferences: ['舒适型', '高档型'],
       budget: '中等'
     }
   },
@@ -255,6 +259,7 @@ const examples = [
       destination: '杭州',
       days: 2,
       preferences: ['自然', '休闲'],
+      hotelPreferences: ['经济型', '民宿'],
       budget: '经济'
     }
   },
@@ -266,6 +271,7 @@ const examples = [
       destination: '成都',
       days: 4,
       preferences: ['美食', '休闲'],
+      hotelPreferences: ['舒适型', '高档型'],
       budget: '宽裕'
     }
   }
@@ -274,7 +280,8 @@ const examples = [
 // 填充示例数据
 const fillExample = (example: any) => {
   formData.destination = example.data.destination
-  formData.preferences = example.data.preferences
+  formData.preferences = example.data.preferences || []
+  formData.hotelPreferences = example.data.hotelPreferences || []
   formData.budget = example.data.budget
   
   // 设置日期范围
@@ -300,6 +307,11 @@ const handleSubmit = async () => {
     loading.value = true
     loadingProgressVisible.value = true
     
+    // 创建取消令牌
+    const CancelToken = axios.CancelToken
+    const source = CancelToken.source()
+    cancelTokenSource.value = source
+    
     try {
       // 构建请求数据
       const request: TripPlanRequest = {
@@ -311,8 +323,8 @@ const handleSubmit = async () => {
         budget: formData.budget
       }
       
-      // 调用API
-      const result = await tripApi.createTripPlan(request)
+      // 调用API，传入取消令牌
+      const result = await tripApi.createTripPlan(request, source.token)
       
       // 完成进度条
       loadingProgressRef.value?.completeProgress()
@@ -329,13 +341,29 @@ const handleSubmit = async () => {
         })
       }, 800)
     } catch (error: any) {
+      // 如果是取消请求，不显示错误消息
+      if (axios.isCancel(error)) {
+        return
+      }
       loadingProgressVisible.value = false
       ElMessage.error(error.message || '规划失败，请重试')
       console.error('规划失败:', error)
     } finally {
       loading.value = false
+      cancelTokenSource.value = null
     }
   })
+}
+
+// 处理取消请求
+const handleCancelRequest = () => {
+  if (cancelTokenSource.value) {
+    cancelTokenSource.value.cancel('用户取消了请求')
+    cancelTokenSource.value = null
+  }
+  loading.value = false
+  // 表单数据会自动保留（因为是reactive的）
+  ElMessage.info('已取消请求，您的表单信息已保留')
 }
 </script>
 

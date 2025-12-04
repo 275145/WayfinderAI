@@ -22,14 +22,14 @@ import { ref, onMounted, watch, nextTick } from 'vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import { ElMessage } from 'element-plus'
 import { FullScreen, Guide } from '@element-plus/icons-vue'
-import type { Activity, Location } from '@/types'
+import type { MapPoint, Location } from '@/types'
 
 // 高德地图 Key - 从环境变量读取
 const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || 'YOUR_AMAP_KEY'
 const AMAP_SECURITY_CODE = import.meta.env.VITE_AMAP_SECURITY_CODE || ''
 
 interface Props {
-  activities?: Activity[]
+  points?: MapPoint[]
   center?: Location
 }
 
@@ -90,8 +90,8 @@ const initMap = async () => {
     map.value.addControl(new AMap.Scale())
     map.value.addControl(new AMap.ToolBar())
 
-    // 加载活动标记
-    if (props.activities && props.activities.length > 0) {
+    // 加载行程点位标记
+    if (props.points && props.points.length > 0) {
       await nextTick()
       loadMarkers()
     }
@@ -131,17 +131,17 @@ const getActivityColor = (type: string): string => {
 
 // 加载标记点
 const loadMarkers = () => {
-  if (!map.value || !props.activities) return
+  if (!map.value || !props.points) return
 
   // 清除旧标记
   clearMarkers()
 
-  const points: [number, number][] = []
+  const pathPoints: [number, number][] = []
   
-  props.activities.forEach((activity, index) => {
-    if (!activity.location) return
+  props.points.forEach((point, index) => {
+    if (!point.location) return
 
-    const { lng, lat } = activity.location
+    const { lng, lat } = point.location
     // 校验经纬度
     if (
       typeof lng !== 'number' ||
@@ -151,31 +151,33 @@ const loadMarkers = () => {
       lng < -180 || lng > 180 ||
       lat < -90 || lat > 90
     ) {
-      console.warn('跳过无效位置的活动:', activity.name, { lng, lat })
+      console.warn('跳过无效位置的点位:', point.name, { lng, lat })
       return
     }
 
-    points.push([lng, lat])
+    pathPoints.push([lng, lat])
 
-    const activityIcon = getActivityIcon(activity.type)
-    const activityColor = getActivityColor(activity.type)
+    const activityIcon = getActivityIcon(point.type)
+    const activityColor = getActivityColor(point.type)
 
-    // 创建自定义HTML标记
+    // 创建改进的默认标记（使用SVG样式，更美观）
     const markerContent = `
       <div class="custom-marker" style="--marker-color: ${activityColor}">
-        <div class="marker-icon">${activityIcon}</div>
-        <div class="marker-number">${index + 1}</div>
-        <div class="marker-pulse"></div>
+        <div class="marker-icon-wrapper">
+          <div class="marker-icon">${activityIcon}</div>
+          <div class="marker-number">${index + 1}</div>
+        </div>
       </div>
     `
-
-    // 创建标记
+    
     const marker = new (window as any).AMap.Marker({
       position: [lng, lat],
       content: markerContent,
-      offset: new (window as any).AMap.Pixel(-20, -40),
-      anchor: 'bottom-center'
+      anchor: 'center',
+      offset: new (window as any).AMap.Pixel(0, 0)
     })
+    
+    map.value.add(marker)
 
     // 添加信息窗口
     const infoWindow = new (window as any).AMap.InfoWindow({
@@ -183,13 +185,20 @@ const loadMarkers = () => {
         <div class="info-window">
           <div class="info-header">
             <span class="info-icon">${activityIcon}</span>
-            <h4>${activity.name}</h4>
+            <h4>${point.name}</h4>
           </div>
           <div class="info-body">
-            <p><span class="info-label">时间:</span> ${activity.time}</p>
-            <p><span class="info-label">类型:</span> ${getActivityTypeText(activity.type)}</p>
-            ${activity.details ? `<p class="info-details">${activity.details}</p>` : ''}
-            ${activity.cost ? `<p class="info-cost"><span class="info-label">费用:</span> <strong>¥${activity.cost}</strong></p>` : ''}
+            <p><span class="info-label">类型:</span> ${getActivityTypeText(point.type)}</p>
+            ${
+              point.description
+                ? `<p class="info-details">${point.description}</p>`
+                : ''
+            }
+            ${
+              point.cost
+                ? `<p class="info-cost"><span class="info-label">费用:</span> <strong>¥${point.cost}</strong></p>`
+                : ''
+            }
           </div>
         </div>
       `,
@@ -207,17 +216,16 @@ const loadMarkers = () => {
       marker.setTop(true)
     })
 
-    map.value.add(marker)
     markers.value.push(marker)
   })
 
   // 绘制路线
-  if (points.length > 1 && routeVisible.value) {
-    drawRoute(points)
+  if (pathPoints.length > 1 && routeVisible.value) {
+    drawRoute(pathPoints)
   }
 
   // 自动调整视野
-  if (points.length > 0) {
+  if (pathPoints.length > 0) {
     fitView()
   }
 }
@@ -307,8 +315,8 @@ const getActivityTypeText = (type: string): string => {
   return typeMap[type] || type
 }
 
-// 监听活动变化
-watch(() => props.activities, () => {
+// 监听点位变化
+watch(() => props.points, () => {
   if (map.value) {
     loadMarkers()
   }
@@ -349,78 +357,74 @@ defineExpose({
   }
 }
 
-// 自定义标记样式
+// 自定义标记样式（改进版，更美观）
 :deep(.custom-marker) {
   position: relative;
-  width: 40px;
-  height: 50px;
+  width: 48px;
+  height: 48px;
   cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover {
-    transform: scale(1.15) translateY(-3px);
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+    transform: scale(1.2) translateY(-4px);
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.4));
   }
 
-  .marker-icon {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 40px;
-    height: 40px;
-    background: var(--marker-color);
-    border-radius: 50% 50% 50% 0;
-    transform-origin: bottom left;
-    transform: rotate(-45deg) translateX(-50%);
+  .marker-icon-wrapper {
+    position: relative;
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  }
+
+  .marker-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--marker-color);
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     border: 3px solid #fff;
+    position: relative;
     
     &::before {
       content: '';
       position: absolute;
-      width: 8px;
-      height: 8px;
-      background: rgba(255, 255, 255, 0.3);
+      width: 10px;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.4);
       border-radius: 50%;
-      top: 6px;
-      right: 6px;
+      top: 8px;
+      right: 8px;
     }
   }
 
   .marker-number {
     position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%) rotate(45deg);
-    background: #fff;
-    color: var(--marker-color);
+    top: -6px;
+    right: -6px;
     width: 20px;
     height: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 11px;
     font-weight: bold;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  }
-
-  .marker-pulse {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--marker-color);
-    opacity: 0;
-    transform: translateX(-50%);
-    animation: pulse 2s ease-out infinite;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    border: 2px solid #fff;
+    z-index: 10;
+    // 不旋转，保持数字正立
+    transform: none;
+    line-height: 1;
   }
 }
 

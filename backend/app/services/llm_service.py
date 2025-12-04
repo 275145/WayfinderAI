@@ -1,7 +1,8 @@
 import os
 from openai import OpenAI
 from typing import Literal
-from ..config import settings, logger
+from ..config import settings
+from ..observability.logger import default_logger as logger
 from typing import Literal, Optional, Iterator
 Provider = Literal["openai", "zhipu", "modelscope", "ollama", "vllm", "custom"]
 

@@ -1,6 +1,13 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from app.models.trip_model import TripPlanRequest, TripPlanResponse
-from app.config import logger
+from app.observability.logger import default_logger as logger
+from app.exceptions.custom_exceptions import (
+    BusinessException,
+    LLMServiceException,
+    MapServiceException,
+    ImageServiceException
+)
+from app.exceptions.error_codes import ErrorCode
 
 # 导入新的Agent
 from app.agents.planner import PlannerAgent
@@ -22,31 +29,67 @@ def plan_trip(request: TripPlanRequest):
     """
     接收行程规划请求，通过多智能体协作完成规划。（同步版本）
     """
+    logger.info(
+        f"接收到新的行程规划请求",
+        extra={
+            "destination": request.destination,
+            "start_date": request.start_date,
+            "end_date": request.end_date,
+            "budget": request.budget,
+            "preferences": request.preferences,
+            "hotel_preferences": request.hotel_preferences
+        }
+    )
+
     try:
-        logger.info(f"接收到新的行程规划请求: destination={request.destination}")
+        # 参数验证
+        if not request.destination or not request.destination.strip():
+            raise BusinessException(
+                ErrorCode.MISSING_PARAMETER,
+                details={"field": "destination", "message": "目的地不能为空"}
+            )
+        
+        if not request.start_date or not request.end_date:
+            raise BusinessException(
+                ErrorCode.MISSING_PARAMETER,
+                details={"field": "date_range", "message": "日期范围不能为空"}
+            )
 
-        # # 1. 顺序执行各个子任务（景点搜索、酒店搜索、天气查询）
-        # # 如果希望并行，可使用 ThreadPoolExecutor，但此处为简化使用顺序调用
-        # attractions = attraction_agent.search(request.destination, request.preferences)
-        # hotels = hotel_agent.search(request.destination, request.hotel_preferences)
-        # weather = weather_agent.query(request.destination)
-
-        # if not attractions:
-        #     logger.warning("未能找到相关景点，但仍继续规划。")
-
-        # 2. 调用PlannerAgent进行最终规划
-        final_plan = planner_agent.plan_trip(
-            request=request,
-            # attractions=attractions,
-            # hotels=hotels,
-            # weather=weather
-        )
+        # 调用PlannerAgent进行最终规划
+        final_plan = planner_agent.plan_trip(request=request)
 
         if not final_plan:
-            raise HTTPException(status_code=500, detail="无法生成行程计划，请检查日志获取更多信息。")
+            raise BusinessException(
+                ErrorCode.TRIP_PLAN_FAILED,
+                details={"message": "无法生成行程计划，请检查日志获取更多信息"}
+            )
+
+        logger.info(
+            f"行程规划成功",
+            extra={
+                "destination": request.destination,
+                "trip_title": final_plan.trip_title,
+                "days": len(final_plan.days)
+            }
+        )
 
         return final_plan
 
+    except BusinessException:
+        # 业务异常直接抛出，由全局异常处理器处理
+        raise
     except Exception as e:
-        logger.error(f"处理/plan请求时发生意外错误: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"服务器内部错误: {e}")
+        # 其他异常包装为业务异常
+        logger.error(
+            f"处理/plan请求时发生意外错误: {e}",
+            exc_info=True,
+            extra={
+                "destination": request.destination,
+                "error_type": type(e).__name__
+            }
+        )
+        raise BusinessException(
+            ErrorCode.TRIP_PLAN_FAILED,
+            message=f"行程规划失败: {str(e)}",
+            details={"error_type": type(e).__name__}
+        )

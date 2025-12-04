@@ -3,7 +3,7 @@ from datetime import datetime
 from app.models.trip_model import TripPlanRequest, TripPlanResponse
 from app.models.common_model import Attraction, Hotel, Weather
 from app.services.llm_service import LLMService
-from app.config import logger
+from app.observability.logger import default_logger as logger
 from typing import List
 from app.tools.mcp_tool import MCPTool
 from app.config import settings
@@ -77,97 +77,116 @@ HOTEL_AGENT_PROMPT = """你是酒店推荐专家。你的任务是根据城市�
 3. 关键词使用"酒店"或"宾馆"
 """
 
-PLANNER_AGENT_PROMPT = """你是行程规划专家。你的任务是根据**景点信息、酒店信息和天气信息**，生成结构化的旅行计划。
+PLANNER_AGENT_PROMPT = """你是行程规划专家。你的任务是根据景点信息、酒店信息和天气信息，生成详细的旅行计划。
 
-请**严格按照以下 JSON 结构**返回结果，你的输出必须是**有效的 JSON**，不要添加任何额外的解释或注释。
+请严格按照以下 **JSON 结构** 返回旅行计划。你的输出必须是有效的 JSON，不要添加任何额外的解释或注释。
 
-**整体结构:**
+**整体设计要求：**
+1. **景点模型（Attraction）** 必须包含：景点名称、类型、评分、建议游玩时间、描述、地址、经纬度、景点图片 URL 列表、门票价格。
+2. **酒店模型（Hotel）** 在原有基础上，必须补充「距离景点的距离」字段。
+3. **单日行程（DailyPlan）** 必须包含：
+   - 推荐住宿（recommended_hotel）
+   - 景点列表（attractions）
+   - 餐饮列表（dinings）
+   - 单日预算拆分（budget），包括交通费用、餐饮费用、酒店费用、景点门票费用。
+4. **预算**：总预算字段需要拆分为交通费用、餐饮费用、酒店费用、景点门票费用四项，并给出总和。
+5. 所有的「图片」只能挂在 **景点（attractions）** 上，不能给酒店或餐饮生成图片 URL。
+
+**响应格式（示例，仅作为结构参考，字段名和类型必须严格遵守）：**
 ```json
 {
   "trip_title": "一个吸引人的行程标题",
-  "total_budget": 2000.0,
+  "total_budget": {
+    "transport_cost": 300.0,
+    "dining_cost": 800.0,
+    "hotel_cost": 1200.0,
+    "attraction_ticket_cost": 400.0,
+    "total": 2700.0
+  },
   "hotels": [
     {
       "name": "酒店名称",
       "address": "酒店地址",
-      "location": { "lat": 39.915, "lng": 116.397 },
-      "price": 400.0,
-      "rating": 4.5,
-      "distance_to_attraction_km": 1.2
+      "location": {"lat": 39.915, "lng": 116.397},
+      "price": "400元/晚",
+      "rating": "4.5",
+      "distance_to_main_attraction_km": 1.2
     }
   ],
   "days": [
     {
       "day": 1,
-      "theme": "当天主题，例如：古都历史探索",
+      "theme": "古都历史探索",
       "weather": {
         "date": "YYYY-MM-DD",
         "day_weather": "晴",
         "night_weather": "多云",
         "day_temp": "25",
-        "night_temp": "15"
+        "night_temp": "15",
+        "day_wind": "东风3级",
+        "night_wind": "西北风2级"
       },
       "recommended_hotel": {
-        "name": "当日推荐酒店名称",
+        "name": "当日推荐酒店",
         "address": "酒店地址",
-        "location": { "lat": 39.915, "lng": 116.397 },
-        "price": 400.0,
-        "rating": 4.5,
-        "distance_to_attraction_km": 0.8
+        "location": {"lat": 39.915, "lng": 116.397},
+        "price": "400元/晚",
+        "rating": "4.5",
+        "distance_to_main_attraction_km": 0.8
       },
       "attractions": [
         {
           "name": "景点名称",
-          "type": "景点类型，如：历史、人文、公园",
-          "rating": 4.7,
+          "type": "历史文化",
+          "rating": "4.7",
           "suggested_duration_hours": 3.0,
-          "description": "景点简要介绍和游玩建议",
+          "description": "景点简介和游览建议",
           "address": "景点地址",
-          "location": { "lat": 39.915, "lng": 116.397 },
+          "location": {"lat": 39.915, "lng": 116.397},
           "image_urls": [
-            "https://example.com/attraction-image-1.jpg",
-            "https://example.com/attraction-image-2.jpg"
+            "https://example.com/attraction-image-1.jpg"
           ],
-          "ticket_price": 60.0
+          "ticket_price": "60"
         }
       ],
       "dinings": [
         {
           "name": "餐厅名称",
           "address": "餐厅地址",
-          "location": { "lat": 39.910, "lng": 116.400 },
-          "cost_per_person": 50.0,
-          "rating": 4.5
+          "location": {"lat": 39.910, "lng": 116.400},
+          "cost_per_person": "80",
+          "rating": "4.5"
         }
       ],
       "budget": {
-        "transport_cost": 80.0,
-        "dining_cost": 150.0,
+        "transport_cost": 50.0,
+        "dining_cost": 200.0,
         "hotel_cost": 400.0,
-        "ticket_cost": 120.0,
-        "total_cost": 750.0
+        "attraction_ticket_cost": 120.0,
+        "total": 770.0
       }
     }
   ]
 }
 ```
 
-**关键要求:**
-1. **trip_title**: 创建一个吸引人且能体现行程特色的标题。
-2. **total_budget**: 为整个行程计算总预算，包含：交通费用 + 餐饮费用 + 酒店费用 + 景点门票费用。
-3. **hotels**: 列出若干推荐酒店（整体推荐），包含名称、地址、坐标、价格、评分、与主要景点的大致距离（km）。
-4. **days**: 为每一天创建详细的行程：
-   - **recommended_hotel**: 当日推荐住宿（可以从 hotels 中选择或新增）。
-   - **attractions**: 仅包含景点信息，必须使用上面定义的景点字段结构。
-   - **dinings**: 餐饮信息，不要包含景点图片字段。
-   - **budget**: 单日预算拆分，所有字段必须为数字（float），`total_cost` = 当日交通 + 餐饮 + 酒店 + 门票。
-5. **图片要求（重要）**:
-   - 只为 **景点 (attractions)** 提供图片 URL，放在 `image_urls` 数组中。
-   - **不要**为酒店或餐饮生成图片 URL 字段，以免后端在拉取图片时出错。
-6. **天气**: `day_temp` 和 `night_temp` 必须是纯数字字符串（不带单位）。
-7. **避免重复**: 不要在多天中重复推荐完全相同的景点或餐厅。
+**关键要求：**
+1. **trip_title**：创建一个吸引人且能体现行程特色的标题。
+2. **total_budget**：给出四类费用（交通、餐饮、酒店、景点门票），并计算 total 为它们的总和。
+3. **hotels / recommended_hotel**：酒店必须包含名称、地址、位置坐标、价格、评分和距离主要景点的距离。
+4. **days**：为每一天创建详细的行程计划。
+5. **theme**：每天的主题要体现该天的主要活动特色。
+6. **weather**：包含该天的天气信息，温度必须是纯数字（不要带 °C 等单位），并给出白天和夜间的风向与风力（day_wind, night_wind）。
+7. **attractions / dinings**：
+   - attractions：只包含“景点”信息，图片 URL 只能出现在 attractions.image_urls 中。
+   - dinings：只包含餐饮信息，不能包含图片 URL 字段。
+8. **时间规划**：在描述中要体现出合理的时间安排（例如上午/下午/晚上安排哪些景点和餐饮）。
+9. **预算准确**：total_budget.total 必须等于四类费用之和；每天的 budget.total 也必须等于四项之和。
+10. **避免重复**：不要在多天中重复推荐同一个景点或餐厅。
 
-请务必保证返回 JSON 的字段名和结构与上述示例**一致**。
+**重要限制：**
+- 不要为酒店或餐饮生成任何图片 URL 字段。
+- 只有景点（attractions）可以有图片 URL，并且应当尽量与景点名称高度相关。
 """
 class PlannerAgent:
     """
@@ -245,13 +264,19 @@ class PlannerAgent:
         - 个人偏好: {', '.join(request.preferences) if request.preferences else '无'}
         - 酒店偏好: {', '.join(request.hotel_preferences) if request.hotel_preferences else '无'}
 
-        **可用资源（原始数据，供你参考生成结构化 JSON）:**
-        - 推荐景点原始信息:\n{(attractions)}
-        - 推荐酒店原始信息:\n{(hotels)}
-        - 天气预报原始信息:\n{(weather)}
+        **可用资源:**
+        - **推荐景点列表:**\n{(attractions)}
+        - **推荐酒店列表:**\n{(hotels)}
+        - **天气预报:**\n{(weather)}
 
-        请使用系统提示词中给出的 JSON 结构（包含 trip_title、total_budget、hotels、days、recommended_hotel、attractions、dinings、budget 等字段），
-        按照要求返回一个**完整且合法的 JSON 对象**。不要输出 Markdown 代码块标记（如 ```json），也不要添加任何解释文字。
+        **输出要求:**
+        1. 严格按照系统提示中给定的 JSON 结构和字段名生成行程计划。
+        2. 你的输出必须是一个完整的 JSON 对象，包含：
+           - trip_title
+           - total_budget（含 transport_cost / dining_cost / hotel_cost / attraction_ticket_cost / total）
+           - hotels
+           - days（其中包含 recommended_hotel / attractions / dinings / budget 等字段）
+        3. 不要输出任何额外的解释或 Markdown，只输出 JSON。
         """
         return prompt
 
@@ -306,17 +331,18 @@ class PlannerAgent:
             plan_data = json.loads(json_plan_str)
             validated_plan = TripPlanResponse.model_validate(plan_data)
 
-            # 只为景点获取图片：遍历每日行程的 attractions
+            # 为每日行程中的景点获取图片：
+            # - 只给 attractions 填充图片
+            # - 不给酒店和餐饮生成图片，避免类型不匹配导致报错
             for day in validated_plan.days:
                 for attraction in day.attractions:
-                    # 仅在 image_urls 为空时补充一张图片，且严格限定为景点图片
                     if not attraction.image_urls:
                         image_url = self.unsplash_service.get_photo_url(
-                            f"{attraction.name} {request.destination} 景点 landmark tourist attraction",
-                            ensure_attraction=True
+                            f"{attraction.name} {request.destination}"
                         )
+                        # 即使只获取到一张，也按列表形式存储，保证类型一致
                         if image_url:
-                            attraction.image_urls.append(image_url)
+                            attraction.image_urls = [image_url]
             logger.info(f"成功生成并验证了行程计划: {validated_plan.trip_title}")
             return validated_plan
         except (json.JSONDecodeError, Exception) as e:

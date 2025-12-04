@@ -35,9 +35,16 @@ apiClient.interceptors.response.use(
 export const tripApi = {
   /**
    * 创建行程规划
+   * @param request 行程规划请求数据
+   * @param cancelToken 可选的取消令牌
    */
-  async createTripPlan(request: TripPlanRequest): Promise<TripPlanResponse> {
-    return apiClient.post('/api/v1/trips/plan', request)
+  async createTripPlan(
+    request: TripPlanRequest,
+    cancelToken?: any
+  ): Promise<TripPlanResponse> {
+    return apiClient.post('/api/v1/trips/plan', request, {
+      cancelToken
+    })
   },
 
   /**
