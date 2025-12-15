@@ -8,9 +8,7 @@ from collections import defaultdict
 from threading import Lock
 from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
-from app.observability.logger import default_logger, get_request_id
-
-logger = default_logger
+from app.observability.logger import default_logger as logger, get_request_id
 
 
 class TokenBucket:

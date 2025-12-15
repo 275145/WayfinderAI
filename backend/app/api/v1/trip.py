@@ -27,17 +27,24 @@ planner_agent = PlannerAgent(llm_service=LLMService)
 @router.post("/plan", response_model=TripPlanResponse)
 def plan_trip(request: TripPlanRequest):
     """
-    接收行程规划请求，通过多智能体协作完成规划。（同步版本）
+    接收行程规划请求，通过多智能体协作完成规划。（增强版 - 支持记忆和上下文）
     """
+    from app.observability.logger import get_request_id
+    
+    # 获取用户ID（可以从请求头或session中获取，这里简化处理）
+    # 实际应用中可以从认证token中获取
+    user_id = get_request_id()  # 暂时使用request_id作为user_id
+    
     logger.info(
-        f"接收到新的行程规划请求",
+        f"接收到新的行程规划请求（增强版）",
         extra={
             "destination": request.destination,
             "start_date": request.start_date,
             "end_date": request.end_date,
             "budget": request.budget,
             "preferences": request.preferences,
-            "hotel_preferences": request.hotel_preferences
+            "hotel_preferences": request.hotel_preferences,
+            "user_id": user_id
         }
     )
 
@@ -55,8 +62,8 @@ def plan_trip(request: TripPlanRequest):
                 details={"field": "date_range", "message": "日期范围不能为空"}
             )
 
-        # 调用PlannerAgent进行最终规划
-        final_plan = planner_agent.plan_trip(request=request)
+        # 调用增强的PlannerAgent进行规划
+        final_plan = planner_agent.plan_trip(request=request, user_id=user_id)
 
         if not final_plan:
             raise BusinessException(
@@ -65,11 +72,12 @@ def plan_trip(request: TripPlanRequest):
             )
 
         logger.info(
-            f"行程规划成功",
+            f"行程规划成功（增强版）",
             extra={
                 "destination": request.destination,
                 "trip_title": final_plan.trip_title,
-                "days": len(final_plan.days)
+                "days": len(final_plan.days),
+                "user_id": user_id
             }
         )
 
@@ -85,7 +93,8 @@ def plan_trip(request: TripPlanRequest):
             exc_info=True,
             extra={
                 "destination": request.destination,
-                "error_type": type(e).__name__
+                "error_type": type(e).__name__,
+                "user_id": user_id
             }
         )
         raise BusinessException(

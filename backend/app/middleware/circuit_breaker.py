@@ -6,9 +6,7 @@ import time
 from enum import Enum
 from typing import Callable, Any, Optional
 from threading import Lock
-from app.observability.logger import default_logger
-
-logger = default_logger
+from app.observability.logger import default_logger as logger
 
 
 class CircuitState(Enum):

@@ -138,7 +138,10 @@ const loadMarkers = () => {
 
   const pathPoints: [number, number][] = []
   
-  props.points.forEach((point, index) => {
+  // 使用独立的计数器确保编号连续
+  let markerNumber = 1
+  
+  props.points.forEach((point) => {
     if (!point.location) return
 
     const { lng, lat } = point.location
@@ -165,10 +168,13 @@ const loadMarkers = () => {
       <div class="custom-marker" style="--marker-color: ${activityColor}">
         <div class="marker-icon-wrapper">
           <div class="marker-icon">${activityIcon}</div>
-          <div class="marker-number">${index + 1}</div>
+          <div class="marker-number">${markerNumber}</div>
         </div>
       </div>
     `
+    
+    // 递增标记编号
+    markerNumber++
     
     const marker = new (window as any).AMap.Marker({
       position: [lng, lat],

@@ -4,10 +4,8 @@
 """
 from typing import Callable, Any, Optional
 from functools import wraps
-from app.observability.logger import default_logger
+from app.observability.logger import default_logger as logger
 from app.middleware.circuit_breaker import CircuitBreaker, circuit_breaker_manager
-
-logger = default_logger
 
 
 def fallback_response(default_value: Any = None):

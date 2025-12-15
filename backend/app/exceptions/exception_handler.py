@@ -8,9 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.exceptions.custom_exceptions import BaseAppException
 from app.exceptions.error_codes import ErrorCode, get_error_message
-from app.observability.logger import default_logger, get_request_id
-
-logger = default_logger
+from app.observability.logger import default_logger as logger, get_request_id
 
 
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
