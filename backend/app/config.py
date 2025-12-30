@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     # AMAP MCP Server
     AMAP_MCP_SERVER_URL: str = "http://127.0.0.1:8000"
 
+    # JWT 认证配置
+    JWT_SECRET: str = "your-secret-key-change-in-production"
+    JWT_EXPIRY_HOURS: int = 24
+
+    # 向量数据库配置
+    VECTOR_MEMORY_DIR: str = "vector_memory"
+    EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    VECTOR_DIM: int = 384
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding='utf-8')
 
     def get_cors_origins_list(self) -> List[str]:

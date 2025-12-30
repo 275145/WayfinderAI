@@ -5,3 +5,9 @@ pydantic-settings
 requests
 openai
 python-dotenv
+# 新增依赖
+pyjwt  # JWT认证
+email-validator  # 邮箱验证
+sentence-transformers  # 文本嵌入
+faiss-cpu  # 向量数据库（CPU版本）
+numpy  # 数值计算

@@ -137,15 +137,15 @@ const loadMarkers = () => {
   clearMarkers()
 
   const pathPoints: [number, number][] = []
-  
-  // 使用独立的计数器确保编号连续
-  let markerNumber = 1
-  
+
+  // 按经纬度分组，避免同一坐标的点相互遮挡
+  const groups = new Map<string, MapPoint[]>()
+
   props.points.forEach((point) => {
     if (!point.location) return
 
     const { lng, lat } = point.location
-    // 校验经纬度
+
     if (
       typeof lng !== 'number' ||
       typeof lat !== 'number' ||
@@ -158,53 +158,74 @@ const loadMarkers = () => {
       return
     }
 
+    // 使用固定精度的经纬度字符串作为分组 key，避免浮点误差
+    const key = `${lng.toFixed(6)},${lat.toFixed(6)}`
+    if (!groups.has(key)) {
+      groups.set(key, [])
+    }
+    groups.get(key)!.push(point)
+  })
+
+  let groupIndex = 0
+
+  groups.forEach((groupPoints, key) => {
+    groupIndex++
+
+    const [lngStr, latStr] = key.split(',')
+    const lng = Number(lngStr)
+    const lat = Number(latStr)
+
     pathPoints.push([lng, lat])
 
-    const activityIcon = getActivityIcon(point.type)
-    const activityColor = getActivityColor(point.type)
+    const firstPoint = groupPoints[0]
+    const activityIcon = getActivityIcon(firstPoint.type)
+    const activityColor = getActivityColor(firstPoint.type)
 
-    // 创建改进的默认标记（使用SVG样式，更美观）
     const markerContent = `
       <div class="custom-marker" style="--marker-color: ${activityColor}">
         <div class="marker-icon-wrapper">
           <div class="marker-icon">${activityIcon}</div>
-          <div class="marker-number">${markerNumber}</div>
+          <div class="marker-number">${groupIndex}</div>
         </div>
       </div>
     `
-    
-    // 递增标记编号
-    markerNumber++
-    
+
     const marker = new (window as any).AMap.Marker({
       position: [lng, lat],
       content: markerContent,
       anchor: 'center',
-      offset: new (window as any).AMap.Pixel(0, 0)
+      offset: new (window as any).AMap.Pixel(0, 0),
+      extData: {
+        index: groupIndex,
+        points: groupPoints
+      }
     })
-    
-    map.value.add(marker)
 
-    // 添加信息窗口
+    // 构造信息窗口内容：一个坐标下的多个点一起展示
+    const listHtml = groupPoints
+      .map((p, idx) => {
+        return `
+          <li>
+            <strong>${idx + 1}. ${p.name}</strong>
+            <div>类型: ${getActivityTypeText(p.type)}</div>
+            ${p.description ? `<div>${p.description}</div>` : ''}
+            ${p.cost ? `<div>费用: <strong>¥${p.cost}</strong></div>` : ''}
+          </li>
+        `
+      })
+      .join('')
+
     const infoWindow = new (window as any).AMap.InfoWindow({
       content: `
         <div class="info-window">
           <div class="info-header">
             <span class="info-icon">${activityIcon}</span>
-            <h4>${point.name}</h4>
+            <h4>地点组 ${groupIndex}</h4>
           </div>
           <div class="info-body">
-            <p><span class="info-label">类型:</span> ${getActivityTypeText(point.type)}</p>
-            ${
-              point.description
-                ? `<p class="info-details">${point.description}</p>`
-                : ''
-            }
-            ${
-              point.cost
-                ? `<p class="info-cost"><span class="info-label">费用:</span> <strong>¥${point.cost}</strong></p>`
-                : ''
-            }
+            <ul class="info-list">
+              ${listHtml}
+            </ul>
           </div>
         </div>
       `,
@@ -212,20 +233,24 @@ const loadMarkers = () => {
       autoMove: true
     })
 
-    // 添加点击事件
     marker.on('click', () => {
+      map.value.clearInfoWindow()
       infoWindow.open(map.value, marker.getPosition())
     })
 
-    // 添加鼠标悬停效果
     marker.on('mouseover', () => {
       marker.setTop(true)
     })
 
+    marker.on('mouseout', () => {
+      marker.setTop(false)
+    })
+
     markers.value.push(marker)
+    map.value.add(marker)
   })
 
-  // 绘制路线
+  // 绘制路线（按地点组连线）
   if (pathPoints.length > 1 && routeVisible.value) {
     drawRoute(pathPoints)
   }
@@ -389,8 +414,8 @@ defineExpose({
     width: 48px;
     height: 48px;
     background: var(--marker-color);
-    border-radius: 50% 50% 50% 0;
-    transform: rotate(-45deg);
+    border-radius: 50%;
+    transform: none;
     display: flex;
     align-items: center;
     justify-content: center;

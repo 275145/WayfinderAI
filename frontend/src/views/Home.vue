@@ -198,15 +198,17 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Location, Search } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { tripApi } from '@/services/api'
 import LoadingProgress from '@/components/LoadingProgress.vue'
 import type { TripFormData, TripPlanRequest } from '@/types'
 import type { FormInstance, FormRules } from 'element-plus'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 const loadingProgressVisible = ref(false)
@@ -303,6 +305,27 @@ const handleSubmit = async () => {
   
   await formRef.value.validate(async (valid) => {
     if (!valid) return
+    
+    // 检查用户是否已登录
+    if (!authStore.isAuthenticated) {
+      try {
+        await ElMessageBox.confirm(
+          '您需要登录后才能使用行程规划功能，是否前往登录？',
+          '未登录提示',
+          {
+            confirmButtonText: '前往登录',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+        // 用户确认，跳转到登录页面
+        router.push('/login')
+      } catch {
+        // 用户取消
+        ElMessage.info('请先登录后再使用行程规划功能')
+      }
+      return
+    }
     
     loading.value = true
     loadingProgressVisible.value = true

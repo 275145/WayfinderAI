@@ -49,5 +49,13 @@ class UnsplashService:
 
     def get_photo_url(self, query: str) -> Optional[str]:
         """获取单张图片URL"""
+        logger.info(f"搜索图片: '{query}'")
         photos = self.search_photos(query, per_page=1)
-        return photos[0].get("url") if photos else None
+        
+        if photos:
+            url = photos[0].get("url")
+            logger.info(f"✅ 找到图片: {url}")
+            return url
+        else:
+            logger.warning(f"⚠️ 未找到图片: '{query}'")
+            return None

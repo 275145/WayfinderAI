@@ -1,0 +1,717 @@
+{
+  "0": {
+    "user_id": "30115041-7b0b-4c4c-92c7-b604c9ef593a",
+    "type": "preference",
+    "preference_type": "trip_planning",
+    "data": {
+      "preference_type": "trip_planning",
+      "destination": "杭州",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "trip_result": "```json\n{\n  \"trip_title\": \"杭州自然休闲之旅\",\n  \"total_budget\": {\n    \"transport_cost\": 200.0,\n    \"dining_cost\": 400.0,\n    \"hotel_cost\": 600.0,\n    \"attraction_ticket_cost\": 200.0,\n    \"total\": 1400.0\n  },\n"
+    },
+    "text_representation": "偏好类型: trip_planning 目的地: 杭州 旅行偏好: 自然, 休闲",
+    "timestamp": "2025-12-29T17:04:54.905166",
+    "similarity_score": 0.6542657613754272
+  },
+  "1": {
+    "user_id": "30115041-7b0b-4c4c-92c7-b604c9ef593a",
+    "type": "preference",
+    "preference_type": "trip_request",
+    "data": {
+      "destination": "杭州",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "民宿"
+      ],
+      "budget": "经济",
+      "trip_title": "杭州自然休闲之旅"
+    },
+    "text_representation": "偏好类型: trip_request 目的地: 杭州 旅行偏好: 自然, 休闲 酒店偏好: 经济型, 民宿 预算水平: 经济",
+    "timestamp": "2025-12-29T17:15:13.695721",
+    "similarity_score": 0.6112585067749023
+  },
+  "2": {
+    "user_id": "30115041-7b0b-4c4c-92c7-b604c9ef593a",
+    "type": "trip",
+    "data": {
+      "destination": "杭州",
+      "start_date": "2026-01-05",
+      "end_date": "2026-01-06",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "民宿"
+      ],
+      "budget": "经济",
+      "trip_title": "杭州自然休闲之旅",
+      "days": [
+        {
+          "day": 1,
+          "theme": "西湖与飞来峰自然风光",
+          "weather": {
+            "date": "2026-01-05",
+            "day_weather": "晴",
+            "night_weather": "多云",
+            "day_temp": "10",
+            "night_temp": "-2",
+            "day_wind": "东风3级",
+            "night_wind": "东北风3级"
+          },
+          "recommended_hotel": {
+            "name": "杭州西湖区瑞通快捷酒店",
+            "address": "杭州市西湖区断桥路2号",
+            "location": {
+              "lat": 30.2545,
+              "lng": 120.1245
+            },
+            "price": "200元/晚",
+            "rating": "4.2",
+            "distance_to_main_attraction_km": 0.5
+          },
+          "attractions": [
+            {
+              "name": "西湖",
+              "type": "自然",
+              "rating": "4.7",
+              "suggested_duration_hours": 4.0,
+              "description": "西湖是中国最著名的湖泊之一，以其美丽的自然风光和丰富的文化底蕴而闻名。",
+              "address": "浙江省杭州市西湖区岳王路1号",
+              "location": {
+                "lat": 30.2409,
+                "lng": 120.1458
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1753365324076-a2cc26d16e98?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTglQTUlQkYlRTYlQjklOTYlMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzY2OTk5NzA4fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            },
+            {
+              "name": "飞来峰",
+              "type": "自然",
+              "rating": "4.6",
+              "suggested_duration_hours": 2.0,
+              "description": "飞来峰位于西湖风景区内，以其奇特的岩石和宁静的氛围吸引了众多游客。",
+              "address": "浙江省杭州市西湖区玉泉路1号",
+              "location": {
+                "lat": 30.2399,
+                "lng": 120.1468
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1696513790795-e8fe7f017f02?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlOUQlQUQlRTUlQjclOUUlMjBsYW5kbWFya3xlbnwwfHx8fDE3NjY5OTkxMDJ8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "30"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "楼外楼",
+              "address": "浙江省杭州市西湖区平海路1号",
+              "location": {
+                "lat": 30.2408,
+                "lng": 120.1457
+              },
+              "cost_per_person": "80",
+              "rating": "4.5"
+            }
+          ],
+          "budget": {
+            "transport_cost": 100.0,
+            "dining_cost": 160.0,
+            "hotel_cost": 200.0,
+            "attraction_ticket_cost": 60.0,
+            "total": 520.0
+          }
+        },
+        {
+          "day": 2,
+          "theme": "灵隐寺与钱塘江大桥",
+          "weather": {
+            "date": "2026-01-06",
+            "day_weather": "多云",
+            "night_weather": "阴",
+            "day_temp": "8",
+            "night_temp": "-1",
+            "day_wind": "北风2级",
+            "night_wind": "北风2级"
+          },
+          "recommended_hotel": {
+            "name": "杭州灵隐宾馆",
+            "address": "杭州市西湖区灵隐路1号",
+            "location": {
+              "lat": 30.2845,
+              "lng": 120.1445
+            },
+            "price": "250元/晚",
+            "rating": "4.0",
+            "distance_to_main_attraction_km": 0.3
+          },
+          "attractions": [
+            {
+              "name": "灵隐寺",
+              "type": "文化",
+              "rating": "4.5",
+              "suggested_duration_hours": 3.0,
+              "description": "灵隐寺以佛教寺庙著称，但其周围的自然环境也十分优美，适合休闲游览。",
+              "address": "浙江省杭州市西湖区灵隐路1号",
+              "location": {
+                "lat": 30.2845,
+                "lng": 120.1445
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1753364971896-a55ebc73361f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTclODElQjUlRTklOUElOTAlRTUlQUYlQkElMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzY2OTk5MDk4fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "知味观",
+              "address": "浙江省杭州市上城区延安路123号",
+              "location": {
+                "lat": 30.2523,
+                "lng": 120.1845
+              },
+              "cost_per_person": "60",
+              "rating": "4.4"
+            }
+          ],
+          "budget": {
+            "transport_cost": 50.0,
+            "dining_cost": 120.0,
+            "hotel_cost": 250.0,
+            "attraction_ticket_cost": 0.0,
+            "total": 420.0
+          }
+        }
+      ]
+    },
+    "text_representation": "旅行行程 目的地: 杭州 时间: 2026-01-05 到 2026-01-06 偏好: 自然, 休闲 行程标题: 杭州自然休闲之旅 景点: 西湖, 飞来峰, 灵隐寺",
+    "timestamp": "2025-12-29T17:15:13.733172",
+    "similarity_score": 0.5993242263793945
+  },
+  "3": {
+    "user_id": "30115041-7b0b-4c4c-92c7-b604c9ef593a",
+    "type": "preference",
+    "preference_type": "trip_preferences",
+    "data": {
+      "destination": "杭州",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "民宿"
+      ],
+      "budget": "经济"
+    },
+    "text_representation": "偏好类型: trip_preferences 目的地: 杭州 旅行偏好: 自然, 休闲 酒店偏好: 经济型, 民宿 预算水平: 经济",
+    "timestamp": "2025-12-29T17:15:13.767846",
+    "similarity_score": 0.5877498388290405
+  },
+  "4": {
+    "user_id": "30115041-7b0b-4c4c-92c7-b604c9ef593a",
+    "type": "preference",
+    "preference_type": "trip_request",
+    "data": {
+      "destination": "杭州",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "民宿"
+      ],
+      "budget": "经济",
+      "trip_title": "杭州自然休闲之旅"
+    },
+    "text_representation": "偏好类型: trip_request 目的地: 杭州 旅行偏好: 自然, 休闲 酒店偏好: 经济型, 民宿 预算水平: 经济",
+    "timestamp": "2025-12-29T17:25:17.179786"
+  },
+  "5": {
+    "user_id": "30115041-7b0b-4c4c-92c7-b604c9ef593a",
+    "type": "trip",
+    "data": {
+      "destination": "杭州",
+      "start_date": "2026-01-05",
+      "end_date": "2026-01-06",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "民宿"
+      ],
+      "budget": "经济",
+      "trip_title": "杭州自然休闲之旅",
+      "days": [
+        {
+          "day": 1,
+          "theme": "西湖周边自然休闲",
+          "weather": {
+            "date": "2026-01-05",
+            "day_weather": "晴",
+            "night_weather": "晴",
+            "day_temp": "7",
+            "night_temp": "-2",
+            "day_wind": "微风1级",
+            "night_wind": "微风1级"
+          },
+          "recommended_hotel": {
+            "name": "杭州西湖四季民家民宿",
+            "address": "浙江省杭州市西湖区杨公堤18号",
+            "location": {
+              "lat": 30.259432,
+              "lng": 120.135552
+            },
+            "price": "经济型",
+            "rating": "4.5",
+            "distance_to_main_attraction_km": 0.8
+          },
+          "attractions": [
+            {
+              "name": "西湖",
+              "type": "自然",
+              "rating": "4.7",
+              "suggested_duration_hours": 4.0,
+              "description": "西湖以其美丽的自然风光和丰富的文化遗产而闻名，适合在晴朗的天气下漫步湖畔，欣赏断桥残雪和苏堤春晓等经典景点。",
+              "address": "浙江省杭州市西湖区",
+              "location": {
+                "lat": 30.267129,
+                "lng": 120.139048
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1753365324076-a2cc26d16e98?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTglQTUlQkYlRTYlQjklOTYlMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzY2OTk5NzA4fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            },
+            {
+              "name": "飞来峰",
+              "type": "自然",
+              "rating": "4.5",
+              "suggested_duration_hours": 2.0,
+              "description": "飞来峰位于玉皇山上，是一处风景秀丽的自然景观区，也是杭州著名的佛教石窟艺术遗址，建议上午前往游览。",
+              "address": "浙江省杭州市西湖区玉皇山",
+              "location": {
+                "lat": 30.268735,
+                "lng": 120.182852
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1696513790795-e8fe7f017f02?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlOUQlQUQlRTUlQjclOUUlMjBsYW5kbWFya3xlbnwwfHx8fDE3NjY5OTkxMDJ8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "20"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "湖滨银泰in77",
+              "address": "浙江省杭州市上城区延安路222号",
+              "location": {
+                "lat": 30.254036,
+                "lng": 120.158685
+              },
+              "cost_per_person": "80",
+              "rating": "4.5"
+            }
+          ],
+          "budget": {
+            "transport_cost": 50.0,
+            "dining_cost": 200.0,
+            "hotel_cost": 400.0,
+            "attraction_ticket_cost": 130.0,
+            "total": 880.0
+          }
+        },
+        {
+          "day": 2,
+          "theme": "千岛湖与茶博馆",
+          "weather": {
+            "date": "2026-01-06",
+            "day_weather": "晴",
+            "night_weather": "晴",
+            "day_temp": "9",
+            "night_temp": "-1",
+            "day_wind": "微风1级",
+            "night_wind": "微风1级"
+          },
+          "recommended_hotel": {
+            "name": "杭州灵隐寺附近民宿",
+            "address": "浙江省杭州市西湖区灵隐路1号",
+            "location": {
+              "lat": 30.268735,
+              "lng": 120.182852
+            },
+            "price": "经济型",
+            "rating": "4.2",
+            "distance_to_main_attraction_km": 0.5
+          },
+          "attractions": [
+            {
+              "name": "茶博馆",
+              "type": "自然",
+              "rating": "4.3",
+              "suggested_duration_hours": 2.0,
+              "description": "了解杭州茶文化的绝佳去处，同时也提供了一些自然景观的参观。",
+              "address": "浙江省杭州市西湖区龙井路28号",
+              "location": {
+                "lat": 30.268735,
+                "lng": 120.182852
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1686757569201-21c37c23eb63?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTglOEMlQjYlRTUlOEQlOUElRTklQTYlODYlMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzY3MDAwMzE4fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "30"
+            }
+          ],
+          "dinings": [],
+          "budget": {
+            "transport_cost": 150.0,
+            "dining_cost": 200.0,
+            "hotel_cost": 400.0,
+            "attraction_ticket_cost": 230.0,
+            "total": 980.0
+          }
+        }
+      ]
+    },
+    "text_representation": "旅行行程 目的地: 杭州 时间: 2026-01-05 到 2026-01-06 偏好: 自然, 休闲 行程标题: 杭州自然休闲之旅 景点: 西湖, 飞来峰, 茶博馆",
+    "timestamp": "2025-12-29T17:25:17.214332"
+  },
+  "6": {
+    "user_id": "30115041-7b0b-4c4c-92c7-b604c9ef593a",
+    "type": "preference",
+    "preference_type": "trip_preferences",
+    "data": {
+      "destination": "杭州",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "民宿"
+      ],
+      "budget": "经济"
+    },
+    "text_representation": "偏好类型: trip_preferences 目的地: 杭州 旅行偏好: 自然, 休闲 酒店偏好: 经济型, 民宿 预算水平: 经济",
+    "timestamp": "2025-12-29T17:25:17.247022"
+  },
+  "7": {
+    "user_id": "d10ff920-d809-405d-89ce-33dce5b47886",
+    "type": "preference",
+    "preference_type": "trip_request",
+    "data": {
+      "destination": "成都",
+      "preferences": [
+        "美食",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "舒适型",
+        "高档型"
+      ],
+      "budget": "宽裕",
+      "trip_title": "成都美食与休闲之旅"
+    },
+    "text_representation": "偏好类型: trip_request 目的地: 成都 旅行偏好: 美食, 休闲 酒店偏好: 舒适型, 高档型 预算水平: 宽裕",
+    "timestamp": "2025-12-30T15:15:18.583097"
+  },
+  "8": {
+    "user_id": "d10ff920-d809-405d-89ce-33dce5b47886",
+    "type": "trip",
+    "data": {
+      "destination": "成都",
+      "start_date": "2026-01-06",
+      "end_date": "2026-01-09",
+      "preferences": [
+        "美食",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "舒适型",
+        "高档型"
+      ],
+      "budget": "宽裕",
+      "trip_title": "成都美食与休闲之旅",
+      "days": [
+        {
+          "day": 1,
+          "theme": "美食探索",
+          "weather": {
+            "date": "2026-01-06",
+            "day_weather": "多云",
+            "night_weather": "多云",
+            "day_temp": "5",
+            "night_temp": "15",
+            "day_wind": "东北风2级",
+            "night_wind": "东北风2级"
+          },
+          "recommended_hotel": {
+            "name": "成都锦江宾馆",
+            "address": "四川省成都市青羊区人民中路二段1号",
+            "location": {
+              "lat": 30.673871,
+              "lng": 104.065768
+            },
+            "price": "400元/晚",
+            "rating": "4.5",
+            "distance_to_main_attraction_km": 0.5
+          },
+          "attractions": [
+            {
+              "name": "成都小吃街",
+              "type": "美食",
+              "rating": "4.7",
+              "suggested_duration_hours": 3.0,
+              "description": "成都小吃街是一条充满成都地道小吃的步行街，如担担面、龙抄手、钟水饺等。",
+              "address": "四川省成都市青羊区人民中路一段7号",
+              "location": {
+                "lat": 30.674056,
+                "lng": 104.066164
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1601949117553-68a5936cf9a4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlODglOTAlRTklODMlQkQlMjBsYW5kbWFya3xlbnwwfHx8fDE3NjcwNzg5MDV8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "蜀九香火锅店",
+              "address": "四川省成都市武侯区玉林西路",
+              "location": {
+                "lat": 30.674556,
+                "lng": 104.058889
+              },
+              "cost_per_person": "120",
+              "rating": "4.6"
+            }
+          ],
+          "budget": {
+            "transport_cost": 100.0,
+            "dining_cost": 200.0,
+            "hotel_cost": 400.0,
+            "attraction_ticket_cost": 0.0,
+            "total": 700.0
+          }
+        },
+        {
+          "day": 2,
+          "theme": "文化体验",
+          "weather": {
+            "date": "2026-01-07",
+            "day_weather": "晴朗",
+            "night_weather": "晴朗",
+            "day_temp": "4",
+            "night_temp": "16",
+            "day_wind": "南风2级",
+            "night_wind": "南风2级"
+          },
+          "recommended_hotel": {
+            "name": "成都世纪城诺富特大酒店",
+            "address": "四川省成都市天府大道北段1700号",
+            "location": {
+              "lat": 30.532234,
+              "lng": 104.062371
+            },
+            "price": "800元/晚",
+            "rating": "4.8",
+            "distance_to_main_attraction_km": 3.5
+          },
+          "attractions": [
+            {
+              "name": "宽窄巷子",
+              "type": "历史文化",
+              "rating": "4.7",
+              "suggested_duration_hours": 4.0,
+              "description": "宽窄巷子是一个融合了传统与现代文化的旅游区，其中有许多提供地道成都美食的小店。",
+              "address": "四川省成都市青羊区长顺街附近",
+              "location": {
+                "lat": 30.674111,
+                "lng": 104.066022
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1601949117553-68a5936cf9a4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlODglOTAlRTklODMlQkQlMjBsYW5kbWFya3xlbnwwfHx8fDE3NjcwNzg5MDV8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "老码头火锅",
+              "address": "四川省成都市武侯区玉林西路",
+              "location": {
+                "lat": 30.674556,
+                "lng": 104.058889
+              },
+              "cost_per_person": "150",
+              "rating": "4.8"
+            }
+          ],
+          "budget": {
+            "transport_cost": 100.0,
+            "dining_cost": 250.0,
+            "hotel_cost": 800.0,
+            "attraction_ticket_cost": 0.0,
+            "total": 1150.0
+          }
+        },
+        {
+          "day": 3,
+          "theme": "休闲时光",
+          "weather": {
+            "date": "2026-01-08",
+            "day_weather": "阴天",
+            "night_weather": "阴天",
+            "day_temp": "6",
+            "night_temp": "14",
+            "day_wind": "东南风2级",
+            "night_wind": "东南风2级"
+          },
+          "recommended_hotel": {
+            "name": "成都博舍酒店",
+            "address": "四川省成都市青羊区东城根上街95号",
+            "location": {
+              "lat": 30.673405,
+              "lng": 104.062268
+            },
+            "price": "600元/晚",
+            "rating": "4.5",
+            "distance_to_main_attraction_km": 0.7
+          },
+          "attractions": [
+            {
+              "name": "太古里",
+              "type": "休闲",
+              "rating": "4.6",
+              "suggested_duration_hours": 3.0,
+              "description": "太古里不仅有时尚的购物场所，还有许多特色餐饮店，可以品尝到成都的美味佳肴。",
+              "address": "四川省成都市锦江区人民东路66号",
+              "location": {
+                "lat": 30.668977,
+                "lng": 104.060241
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1627542424169-3122c2a3c998?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTUlQTQlQUElRTUlOEYlQTQlRTklODclOEMlMjAlRTYlODglOTAlRTklODMlQkR8ZW58MHx8fHwxNzY3MDc4OTE0fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "陈麻婆豆腐",
+              "address": "四川省成都市青羊区太古里附近",
+              "location": {
+                "lat": 30.668977,
+                "lng": 104.060241
+              },
+              "cost_per_person": "100",
+              "rating": "4.7"
+            }
+          ],
+          "budget": {
+            "transport_cost": 100.0,
+            "dining_cost": 200.0,
+            "hotel_cost": 600.0,
+            "attraction_ticket_cost": 0.0,
+            "total": 900.0
+          }
+        },
+        {
+          "day": 4,
+          "theme": "自然与小雨体验",
+          "weather": {
+            "date": "2026-01-09",
+            "day_weather": "小雨",
+            "night_weather": "小雨",
+            "day_temp": "7",
+            "night_temp": "13",
+            "day_wind": "北风3级",
+            "night_wind": "北风3级"
+          },
+          "recommended_hotel": {
+            "name": "成都华尔道夫酒店",
+            "address": "四川省成都市武侯祠大街19号",
+            "location": {
+              "lat": 30.663258,
+              "lng": 104.060241
+            },
+            "price": "1000元/晚",
+            "rating": "5.0",
+            "distance_to_main_attraction_km": 0.5
+          },
+          "attractions": [
+            {
+              "name": "锦里",
+              "type": "休闲",
+              "rating": "4.7",
+              "suggested_duration_hours": 3.0,
+              "description": "锦里是一个以三国文化为主题的旅游区，里面有许多小吃摊位，供应各种成都特色美食。",
+              "address": "四川省成都市武侯祠大街231号",
+              "location": {
+                "lat": 30.663158,
+                "lng": 104.060241
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1601949117553-68a5936cf9a4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlODglOTAlRTklODMlQkQlMjBsYW5kbWFya3xlbnwwfHx8fDE3NjcwNzg5MDV8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "蓉城人家",
+              "address": "四川省成都市武侯祠大街231号附近",
+              "location": {
+                "lat": 30.663158,
+                "lng": 104.060241
+              },
+              "cost_per_person": "120",
+              "rating": "4.5"
+            }
+          ],
+          "budget": {
+            "transport_cost": 100.0,
+            "dining_cost": 120.0,
+            "hotel_cost": 1000.0,
+            "attraction_ticket_cost": 0.0,
+            "total": 1220.0
+          }
+        }
+      ]
+    },
+    "text_representation": "旅行行程 目的地: 成都 时间: 2026-01-06 到 2026-01-09 偏好: 美食, 休闲 行程标题: 成都美食与休闲之旅 景点: 成都小吃街, 宽窄巷子, 太古里, 锦里",
+    "timestamp": "2025-12-30T15:15:18.632012"
+  },
+  "9": {
+    "user_id": "d10ff920-d809-405d-89ce-33dce5b47886",
+    "type": "preference",
+    "preference_type": "trip_preferences",
+    "data": {
+      "destination": "成都",
+      "preferences": [
+        "美食",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "舒适型",
+        "高档型"
+      ],
+      "budget": "宽裕"
+    },
+    "text_representation": "偏好类型: trip_preferences 目的地: 成都 旅行偏好: 美食, 休闲 酒店偏好: 舒适型, 高档型 预算水平: 宽裕",
+    "timestamp": "2025-12-30T15:15:18.669599"
+  }
+}

@@ -9,7 +9,8 @@ from typing import List, Optional, Tuple
 from app.tools.mcp_tool import MCPTool
 from app.config import settings
 from app.services.unsplash_service import UnsplashService
-from app.services.memory_service import memory_service
+# from app.services.memory_service import memory_service  # 替换为向量记忆服务
+from app.services.vector_memory_service import VectorMemoryService
 from app.services.context_manager import ContextManager, get_context_manager
 from app.agents.agent_communication import communication_hub
 from app.agents.specialized_agents import (
@@ -41,10 +42,11 @@ class PlannerAgent:
     负责协调多个增强智能体，整合信息，并生成最终的行程计划。
     支持记忆、上下文、智能体间通信等功能。
     """
-    def __init__(self, llm_service: LLMService):
+    def __init__(self, llm_service: LLMService, memory_service: VectorMemoryService = None):
         self.llm = LLMService()
         self.settings = settings
         self.unsplash_service = UnsplashService(settings.UNSPLASH_ACCESS_KEY)
+        self.memory_service = memory_service or VectorMemoryService()
         
         # 创建工具注册表
         self.tool_registry = ToolRegistry()
@@ -293,21 +295,30 @@ class PlannerAgent:
         if not user_id:
             user_id = request_id
         
-        # 检索用户记忆并添加到上下文
-        user_preferences = memory_service.retrieve_user_preferences(user_id)
-        if user_preferences:
-            context_manager.add_memory_context("user_preferences", user_preferences)
-            logger.info(f"已加载用户偏好记忆 - UserID: {user_id}")
+        # 检索用户记忆并添加到上下文（使用向量记忆服务）
+        # 构建查询文本
+        query_text = f"{request.destination} {' '.join(request.preferences or [])} {request.budget}"
         
-        # 检索相似行程
-        similar_trips = memory_service.retrieve_similar_trips(
-            request.destination,
-            request.preferences or [],
-            limit=3
+        # 检索用户记忆
+        user_memories = self.memory_service.retrieve_user_memories(
+            user_id=user_id,
+            query=query_text,
+            limit=5,
+            memory_types=["preference", "trip"]
         )
-        if similar_trips:
-            context_manager.add_memory_context("similar_trips", similar_trips)
-            logger.info(f"已找到 {len(similar_trips)} 个相似行程")
+        if user_memories:
+            context_manager.add_memory_context("user_memories", user_memories)
+            logger.info(f"已加载 {len(user_memories)} 条用户记忆 - UserID: {user_id}")
+        
+        # 检索相关知识记忆
+        knowledge_memories = self.memory_service.retrieve_knowledge_memories(
+            query=f"{request.destination} 旅行 景点 特色",
+            limit=3,
+            knowledge_types=["destination", "experience"]
+        )
+        if knowledge_memories:
+            context_manager.add_memory_context("knowledge_memories", knowledge_memories)
+            logger.info(f"已加载 {len(knowledge_memories)} 条知识记忆")
         
         # 创建增强的智能体
         logger.info("创建增强智能体...")
@@ -382,18 +393,39 @@ class PlannerAgent:
             # 6. 验证和过滤地理位置
             validated_plan = self._validate_and_filter_plan(validated_plan, request.destination)
             
-            # 7. 为景点添加图片
+            # 7. 为景点添加图片（优化搜索关键词）
             for day in validated_plan.days:
                 for attraction in day.attractions:
-                    if not attraction.image_urls:
-                        image_url = self.unsplash_service.get_photo_url(
-                            f"{attraction.name} {request.destination}"
-                        )
+                    # 如果已有图片且不为空列表，跳过
+                    # if attraction.image_urls and len(attraction.image_urls) > 0:
+                    #     continue
+                    
+                    # 构造搜索关键词：优先用"景点名 + 城市"，失败则只用城市
+                    search_queries = [
+                        f"{attraction.name} {request.destination}",  # 完整名称 + 城市
+                        f"{attraction.name}",  # 只用景点名
+                        f"{request.destination} landmark"  # 兜底：城市地标
+                    ]
+                    
+                    logger.info(f"为景点 '{attraction.name}' 搜索图片，尝试关键词: {search_queries[0]}")
+                    
+                    image_url = None
+                    for query in search_queries:
+                        image_url = self.unsplash_service.get_photo_url(query)
                         if image_url:
-                            attraction.image_urls = [image_url]
+                            logger.info(f"✅ 景点 '{attraction.name}' 成功获取图片: {image_url[:80]}...")
+                            break
+                        else:
+                            logger.warning(f"⚠️ 关键词 '{query}' 未找到图片，尝试下一个")
+                    
+                    if image_url:
+                        attraction.image_urls = [image_url]
+                    else:
+                        logger.warning(f"❌ 景点 '{attraction.name}' 所有关键词均未找到图片，保持为空列表")
+                        attraction.image_urls = []
             
             # 8. 存储用户偏好记忆
-            memory_service.store_user_preference(
+            self.memory_service.store_user_preference(
                 user_id,
                 "trip_request",
                 {

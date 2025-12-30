@@ -166,7 +166,15 @@
                         <div class="activity-meta">
                           <el-tag size="small">景点 · {{ attraction.type }}</el-tag>
                           <span v-if="attraction.ticket_price && attraction.ticket_price !== 'N/A'" class="cost">
-                            门票：¥{{ attraction.ticket_price }}
+                            <template v-if="typeof attraction.ticket_price === 'number'">
+                              门票：¥{{ attraction.ticket_price }}
+                            </template>
+                            <template v-else-if="attraction.ticket_price === '免费'">
+                              门票：免费
+                            </template>
+                            <template v-else>
+                              门票：{{ attraction.ticket_price }}
+                            </template>
                           </span>
                           <span v-if="attraction.suggested_duration_hours" class="duration">
                             建议游玩：{{ attraction.suggested_duration_hours }} 小时
@@ -244,7 +252,12 @@
                       size="small"
                     />
                     <span class="hotel-price" v-if="hotel.price">
-                      ¥{{ hotel.price }} / 晚
+                      <template v-if="typeof hotel.price === 'number' && hotel.price > 0">
+                        ¥{{ hotel.price.toFixed(2) }} / 晚
+                      </template>
+                      <template v-else>
+                        {{ hotel.price }}
+                      </template>
                     </span>
                   </div>
                 </div>

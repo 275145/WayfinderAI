@@ -5,7 +5,8 @@
 import re
 from typing import Optional, Iterator, Dict, Any, List
 from hello_agents import SimpleAgent, HelloAgentsLLM, Config, Message
-from app.services.memory_service import memory_service
+# from app.services.memory_service import memory_service  # 替换为向量记忆服务
+from app.services.vector_memory_service import VectorMemoryService
 from app.services.context_manager import ContextManager
 from app.agents.agent_communication import (
     AgentCommunicationHub,
@@ -34,7 +35,8 @@ class EnhancedAgent(SimpleAgent):
         enable_tool_calling: bool = True,
         context_manager: Optional[ContextManager] = None,
         communication_hub: Optional[AgentCommunicationHub] = None,
-        user_id: Optional[str] = None
+        user_id: Optional[str] = None,
+        memory_service: Optional[VectorMemoryService] = None
     ):
         """
         初始化增强智能体
@@ -49,6 +51,7 @@ class EnhancedAgent(SimpleAgent):
             context_manager: 上下文管理器
             communication_hub: 通信中心
             user_id: 用户ID（用于记忆检索）
+            memory_service: 向量记忆服务实例
         """
         super().__init__(name, llm, system_prompt, config)
         self.tool_registry = tool_registry
@@ -56,6 +59,7 @@ class EnhancedAgent(SimpleAgent):
         self.context_manager = context_manager
         self.communication_hub = communication_hub
         self.user_id = user_id
+        self.memory_service = memory_service or VectorMemoryService()
         
         # 注册到通信中心
         if self.communication_hub:
@@ -114,30 +118,42 @@ class EnhancedAgent(SimpleAgent):
         return base_prompt
     
     def _get_memory_context(self) -> str:
-        """获取记忆上下文"""
+        """获取记忆上下文（使用向量记忆服务）"""
         if not self.user_id:
             return ""
         
         context_parts = []
         
-        # 检索用户偏好
-        preferences = memory_service.retrieve_user_preferences(self.user_id)
-        if preferences:
-            context_parts.append(f"用户历史偏好: {str(preferences)[:300]}")
-        
-        # 检索相似行程
-        # 这里需要从上下文获取当前请求信息
+        # 构建查询文本
+        query_text = ""
         if self.context_manager:
             request_context = self.context_manager.get_shared_data("request")
             if request_context:
                 destination = request_context.get("destination", "")
                 prefs = request_context.get("preferences", [])
-                if destination:
-                    similar_trips = memory_service.retrieve_similar_trips(
-                        destination, prefs, limit=3
-                    )
-                    if similar_trips:
-                        context_parts.append(f"相似历史行程: {len(similar_trips)}个")
+                query_text = f"{destination} {' '.join(prefs)}"
+        
+        # 检索用户记忆
+        user_memories = self.memory_service.retrieve_user_memories(
+            user_id=self.user_id,
+            query=query_text,
+            limit=3,
+            memory_types=["preference", "trip"]
+        )
+        if user_memories:
+            memory_texts = [mem.get("text_representation", "")[:100] for mem in user_memories]
+            context_parts.append(f"用户历史记忆: {'; '.join(memory_texts)}")
+        
+        # 检索相关知识记忆
+        if query_text:
+            knowledge_memories = self.memory_service.retrieve_knowledge_memories(
+                query=query_text,
+                limit=2,
+                knowledge_types=["destination", "experience"]
+            )
+            if knowledge_memories:
+                knowledge_texts = [mem.get("text_representation", "")[:100] for mem in knowledge_memories]
+                context_parts.append(f"相关知识: {'; '.join(knowledge_texts)}")
         
         return "\n".join(context_parts)
     
@@ -404,7 +420,7 @@ class EnhancedAgent(SimpleAgent):
         memory_data: Dict[str, Any]
     ):
         """
-        存储记忆
+        存储记忆（使用向量记忆服务）
         
         Args:
             memory_type: 记忆类型
@@ -414,23 +430,25 @@ class EnhancedAgent(SimpleAgent):
             return
         
         if memory_type == "preference":
-            memory_service.store_user_preference(
+            self.memory_service.store_user_preference(
                 self.user_id,
                 memory_data.get("preference_type", "general"),
                 memory_data
             )
         elif memory_type == "feedback":
-            memory_service.store_user_feedback(
+            self.memory_service.store_user_feedback(
                 self.user_id,
                 memory_data.get("trip_id", ""),
                 memory_data
             )
-        elif memory_type == "context":
-            memory_service.store_short_term_context(
+        elif memory_type == "trip":
+            self.memory_service.store_user_trip(
                 self.user_id,
-                memory_data.get("context_key", "general"),
                 memory_data
             )
+        
+        # 保存向量索引
+        self.memory_service.save()
     
     def add_tool(self, tool) -> None:
         """添加工具到Agent（便利方法）"""

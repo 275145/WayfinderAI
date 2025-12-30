@@ -17,6 +17,9 @@ export interface Attraction {
   location?: Location
   image_urls: string[]
   ticket_price: number | string
+  // 前端扩展字段（用于编辑）
+  notes?: string // 用户备注
+  actual_cost?: number // 实际花费
 }
 
 // 与后端 Hotel 模型对齐
@@ -128,4 +131,62 @@ export interface ExportOptions {
   format: 'pdf' | 'image'
   includeBudget: boolean
   includeMap: boolean
+}
+
+// === 用户认证相关类型 ===
+
+// 用户登录请求
+export interface LoginRequest {
+  username: string
+  password: string
+}
+
+// 用户注册请求
+export interface RegisterRequest {
+  username: string
+  password: string
+}
+
+// 用户信息
+export interface User {
+  user_id: string
+  username: string
+  user_type: string  // 'registered'
+  phone?: string
+  gender?: 'male' | 'female' | 'other'
+  birthday?: string
+  bio?: string
+  travel_preferences?: string[]
+  avatar_url?: string
+}
+
+// 用户资料更新请求
+export interface UpdateProfileRequest {
+  username?: string
+  phone?: string
+  gender?: 'male' | 'female' | 'other'
+  birthday?: string
+  bio?: string
+  travel_preferences?: string[]
+  avatar_url?: string
+}
+
+// 修改密码请求
+export interface ChangePasswordRequest {
+  old_password: string
+  new_password: string
+}
+
+// 认证令牌响应
+export interface AuthResponse {
+  access_token: string
+  token_type: string
+  user: User
+}
+
+// 认证状态
+export interface AuthState {
+  isAuthenticated: boolean
+  user: User | null
+  token: string | null
 }

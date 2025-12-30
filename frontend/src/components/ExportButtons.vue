@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, nextTick } from 'vue'
 import { ElMessage, ElLoading } from 'element-plus'
 import { Document, Picture } from '@element-plus/icons-vue'
 import html2canvas from 'html2canvas'
@@ -75,15 +75,23 @@ const handleExport = (format: 'pdf' | 'image') => {
 // 确认导出
 const confirmExport = async () => {
   dialogVisible.value = false
-  exporting.value = true
-
-  const loadingInstance = ElLoading.service({
-    lock: true,
-    text: '正在生成文件...',
-    background: 'rgba(0, 0, 0, 0.7)'
-  })
-
+  
+  // 显示加载（在对话框关闭后）
+  let loadingInstance: any = null
+  
   try {
+    // 等待Vue DOM更新和对话框动画完成
+    await new Promise(resolve => setTimeout(resolve, 100))
+    await nextTick()
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // 现在显示加载提示
+    loadingInstance = ElLoading.service({
+      lock: true,
+      text: '正在生成文件...',
+      background: 'rgba(0, 0, 0, 0.7)'
+    })
+    
     if (currentFormat.value === 'pdf') {
       await exportToPDF()
     } else {
@@ -95,7 +103,9 @@ const confirmExport = async () => {
     ElMessage.error('导出失败，请重试')
   } finally {
     exporting.value = false
-    loadingInstance.close()
+    if (loadingInstance) {
+      loadingInstance.close()
+    }
   }
 }
 
