@@ -76,7 +76,7 @@
 ## 🚀 快速开始
 
 ### 运行环境
-**后端**：Python 3.8+、pip、Redis（可选）
+**后端**：Python 3.11、pip、Redis
 **前端**：Node.js 16+、npm
 **外部服务**：高德地图 API Key、Unsplash API Key、LLM API Key
 
@@ -89,11 +89,21 @@ cd trip_planner
 ```
 
 2. **后端配置**
+
+**安装并启动 Redis**：
+- **Windows**：下载并安装 Redis for Windows，在redis安装目录下使用命令：redis-server.exe
+- **macOS**：`brew install redis && brew services start redis`
+- **Linux**：`sudo apt-get install redis-server && sudo systemctl start redis`
+
 ```bash
 cd backend
 pip install -r requirements.txt
 cp .env.example .env
-# 编辑 .env 文件，填入 API Key 和配置
+# 编辑 .env 文件，填入必要配置：
+#   - LLM_API_KEY（必需）：LLM API 密钥
+#   - AMAP_API_KEY（必需）：高德地图 API 密钥
+#   - UNSPLASH_ACCESS_KEY（必需）：Unsplash API 密钥
+#   - REDIS_HOST、REDIS_PORT（默认 localhost:6379）：Redis 连接信息
 python run.py
 ```
 后端服务将在 http://localhost:8000 启动
