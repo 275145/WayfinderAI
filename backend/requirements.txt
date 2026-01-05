@@ -1,18 +1,70 @@
-fastapi
-uvicorn[standard]
-pydantic
-pydantic-settings
-requests
-openai
-python-dotenv
-# 认证和安全
-pyjwt  # JWT认证
-bcrypt>=4.0.0  # 密码加密（直接使用bcrypt库，避免passlib兼容性问题）
-# Redis持久化
-redis>=4.5.0  # Redis客户端
-# 数据验证
-email-validator  # 邮箱验证
-# 向量和机器学习
-sentence-transformers  # 文本嵌入
-faiss-cpu  # 向量数据库（CPU版本）
-numpy  # 数值计算
+# ============================================
+# 智能旅行规划系统 - Python依赖
+# ============================================
+
+# --- Web框架和服务器 ---
+# FastAPI: 现代化的Python Web框架，用于构建API服务
+fastapi>=0.104.0,<0.115.0
+
+# Uvicorn: ASGI服务器，用于运行FastAPI应用（包含标准依赖）
+uvicorn[standard]>=0.24.0,<0.28.0
+
+# --- 数据验证和配置 ---
+# Pydantic: 数据验证和设置管理
+pydantic>=2.5.0,<2.10.0
+
+# Pydantic Settings: 用于从环境变量加载配置
+pydantic-settings>=2.1.0,<2.3.0
+
+# Python-dotenv: 从.env文件加载环境变量
+python-dotenv>=1.0.0,<1.1.0
+
+# --- HTTP客户端 ---
+# Requests: HTTP请求库，用于调用外部API（Unsplash等）
+requests>=2.31.0,<2.33.0
+
+# --- LLM服务 ---
+# OpenAI: OpenAI API客户端，兼容多种LLM服务提供商
+openai>=1.12.0,<1.55.0
+
+# --- Agent框架 ---
+# HelloAgents: Agent框架，提供LLM和Agent基础能力
+helloagents>=0.1.0
+
+# FastMCP: Model Context Protocol服务器框架
+fastmcp>=0.1.0,<1.0.0
+
+# --- 认证和安全 ---
+# PyJWT: JWT令牌生成和验证
+pyjwt>=2.8.0,<2.10.0
+
+# Bcrypt: 密码加密库（直接使用bcrypt，避免passlib兼容性问题）
+bcrypt>=4.1.0,<5.0.0
+
+# --- 数据验证 ---
+# Email-Validator: 邮箱格式验证
+email-validator>=2.1.0,<2.2.0
+
+# --- 数据库和缓存 ---
+# Redis: Redis客户端，用于用户数据持久化
+redis>=4.6.0,<5.2.0
+
+# --- 向量和机器学习 ---
+# Sentence-Transformers: 文本嵌入模型，用于向量化和语义搜索
+sentence-transformers>=2.3.0,<2.7.0
+
+# FAISS (CPU版本): Facebook AI Similarity Search，用于向量数据库
+faiss-cpu>=1.7.4,<1.9.0
+
+# NumPy: 数值计算库，用于向量操作
+numpy>=1.24.0,<2.2.0
+
+# --- 系统工具 ---
+# Aiofiles: 异步文件操作（可选，用于文件上传等功能）
+aiofiles>=23.2.0,<24.0.0
+
+# Python-Multipart: 多部分表单数据支持（用于文件上传）
+python-multipart>=0.0.6,<0.0.10
+
+# --- Starlette: FastAPI依赖，提供中间件支持 ---
+starlette>=0.27.0,<0.38.0

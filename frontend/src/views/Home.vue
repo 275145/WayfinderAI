@@ -199,7 +199,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Location, Search } from '@element-plus/icons-vue'
+import { Location, Search, InfoFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { tripApi } from '@/services/api'
 import LoadingProgress from '@/components/LoadingProgress.vue'

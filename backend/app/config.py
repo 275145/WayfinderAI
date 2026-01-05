@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     VECTOR_DIM: int = 384
 
+    # HuggingFace 配置
+    HF_ENDPOINT: str = "https://hf-mirror.com"
+    HF_HUB_OFFLINE: bool = False
+    HF_HUB_CACHE_DIR: Optional[str] = None
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding='utf-8')
 
     def get_cors_origins_list(self) -> List[str]:

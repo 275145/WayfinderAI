@@ -4,12 +4,13 @@ Redis服务模块
 """
 import json
 import hashlib
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 from contextlib import contextmanager
 import redis
 import bcrypt
 from app.observability.logger import default_logger as logger
 from app.config import settings
+import datetime
 
 
 # 密码加密轮数
@@ -60,6 +61,14 @@ class RedisService:
     def _generate_username_index_key(self, user_id: str) -> str:
         """生成用户名索引的Redis键"""
         return f"user_index:{user_id}"
+    
+    def _generate_trip_key(self, trip_id: str) -> str:
+        """生成行程数据的Redis键"""
+        return f"trip:{trip_id}"
+    
+    def _generate_user_trips_list_key(self, user_id: str) -> str:
+        """生成用户行程列表的Redis键"""
+        return f"user_trips:{user_id}"
     
     def _hash_password(self, password: str) -> str:
         """
@@ -410,6 +419,125 @@ class RedisService:
         except Exception as e:
             logger.error(f"获取用户名列表失败: {str(e)}")
             return []
+    
+    # ============ 行程相关方法 ============
+    
+    def store_trip(
+        self,
+        user_id: str,
+        trip_id: str,
+        trip_data: Dict[str, Any]
+    ) -> bool:
+        """
+        存储完整行程数据
+        
+        Args:
+            user_id: 用户ID
+            trip_id: 行程ID
+            trip_data: 行程数据（完整行程详情）
+            
+        Returns:
+            是否存储成功
+        """
+        try:
+            trip_key = self._generate_trip_key(trip_id)
+            user_trips_list_key = self._generate_user_trips_list_key(user_id)
+            
+            # 存储完整行程数据为JSON字符串
+            self.redis.set(
+                trip_key,
+                json.dumps(trip_data, ensure_ascii=False),
+                ex=365 * 24 * 60 * 60  # 1年过期
+            )
+            
+            # 将行程ID添加到用户的行程列表中（使用有序集合，按创建时间排序）
+            created_at = trip_data.get('created_at', datetime.datetime.now().isoformat())
+            timestamp = int(datetime.datetime.fromisoformat(created_at).timestamp())
+            self.redis.zadd(user_trips_list_key, {trip_id: timestamp})
+            
+            logger.info(f"行程存储成功 - UserID: {user_id}, TripID: {trip_id}")
+            return True
+        except Exception as e:
+            logger.error(f"行程存储失败: {str(e)}")
+            return False
+    
+    def get_trip(self, trip_id: str) -> Optional[Dict[str, Any]]:
+        """
+        获取指定行程的完整数据
+        
+        Args:
+            trip_id: 行程ID
+            
+        Returns:
+            行程数据，如果不存在则返回None
+        """
+        try:
+            trip_key = self._generate_trip_key(trip_id)
+            trip_data_str = self.redis.get(trip_key)
+            
+            if not trip_data_str:
+                return None
+            
+            return json.loads(trip_data_str)
+        except Exception as e:
+            logger.error(f"获取行程失败: {str(e)}")
+            return None
+    
+    def list_user_trips(self, user_id: str, limit: int = 100) -> List[Dict[str, Any]]:
+        """
+        获取用户的所有行程列表（按创建时间倒序）
+        
+        Args:
+            user_id: 用户ID
+            limit: 返回数量限制
+            
+        Returns:
+            行程列表
+        """
+        try:
+            user_trips_list_key = self._generate_user_trips_list_key(user_id)
+            
+            # 从有序集合中获取行程ID列表（倒序，最新的在前）
+            trip_ids = self.redis.zrevrange(user_trips_list_key, 0, limit - 1)
+            
+            trips = []
+            for trip_id in trip_ids:
+                trip_data = self.get_trip(trip_id)
+                if trip_data:
+                    trips.append(trip_data)
+            
+            logger.info(f"获取用户行程列表 - UserID: {user_id}, Count: {len(trips)}")
+            return trips
+        except Exception as e:
+            logger.error(f"获取用户行程列表失败: {str(e)}")
+            return []
+    
+    def delete_trip(self, user_id: str, trip_id: str) -> bool:
+        """
+        删除指定行程
+        
+        Args:
+            user_id: 用户ID
+            trip_id: 行程ID
+            
+        Returns:
+            是否删除成功
+        """
+        try:
+            trip_key = self._generate_trip_key(trip_id)
+            user_trips_list_key = self._generate_user_trips_list_key(user_id)
+            
+            # 删除行程数据
+            self.redis.delete(trip_key)
+            
+            # 从用户行程列表中移除
+            self.redis.zrem(user_trips_list_key, trip_id)
+            
+            logger.info(f"行程删除成功 - UserID: {user_id}, TripID: {trip_id}")
+            return True
+        except Exception as e:
+            logger.error(f"行程删除失败: {str(e)}")
+            return False
     
     def close(self):
         """关闭Redis连接"""

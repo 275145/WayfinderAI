@@ -5,6 +5,7 @@
 import json
 import os
 import numpy as np
+import threading
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 from pathlib import Path
@@ -16,13 +17,28 @@ from app.config import settings
 
 class VectorMemoryService:
     """
-    基于向量数据库的记忆服务
+    基于向量数据库的记忆服务（单例模式）
     使用FAISS进行向量存储，Sentence-BERT进行文本嵌入
+    实现线程安全的单例模式，避免重复初始化模型
     """
+    
+    # 单例实例
+    _instance = None
+    _lock = threading.Lock()
+    _initialized = False
+    
+    def __new__(cls, *args, **kwargs):
+        """实现单例模式的 __new__ 方法"""
+        if cls._instance is None:
+            with cls._lock:
+                # 双重检查锁定，确保线程安全
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+        return cls._instance
     
     def __init__(
         self,
-        model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        model_name: Optional[str] = None,
         vector_dim: int = 384,
         memory_dir: str = "vector_memory"
     ):
@@ -30,23 +46,33 @@ class VectorMemoryService:
         初始化向量记忆服务
         
         Args:
-            model_name: 句子嵌入模型名称
+            model_name: 句子嵌入模型名称（如果为None，使用配置中的模型）
             vector_dim: 向量维度
             memory_dir: 记忆存储目录
+        
+        注意：由于是单例模式，初始化只会执行一次
         """
+        # 避免重复初始化
+        if hasattr(self, '_initialized') and self._initialized:
+            logger.debug("向量记忆服务已初始化，跳过重复初始化")
+            return
+        
+        logger.info("🚀 初始化向量记忆服务（单例模式）...")
+        
         self.memory_dir = Path(memory_dir)
         self.memory_dir.mkdir(parents=True, exist_ok=True)
         self.vector_dim = vector_dim
         
+        # 使用配置中的模型名称（如果没有提供）
+        if model_name is None:
+            model_name = settings.EMBEDDING_MODEL
+            logger.info(f"使用配置中的嵌入模型: {model_name}")
+        
+        # 设置HuggingFace镜像和缓存配置
+        self._setup_huggingface_config()
+        
         # 初始化嵌入模型
-        try:
-            self.embedding_model = SentenceTransformer(model_name)
-            logger.info(f"已加载嵌入模型: {model_name}")
-        except Exception as e:
-            logger.error(f"加载嵌入模型失败: {e}")
-            # 使用备用模型
-            self.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-            logger.info("已使用备用嵌入模型: all-MiniLM-L6-v2")
+        self.embedding_model = self._load_embedding_model(model_name)
         
         # 初始化FAISS索引
         self.user_memory_index = None
@@ -57,7 +83,107 @@ class VectorMemoryService:
         # 加载或创建索引
         self._load_or_create_indexes()
         
-        logger.info("向量记忆服务初始化完成")
+        # 初始化FAISS索引
+        self.user_memory_index = None
+        self.knowledge_memory_index = None
+        self.user_metadata = {}  # 存储用户记忆的元数据
+        self.knowledge_metadata = {}  # 存储知识记忆的元数据
+        
+        # 加载或创建索引
+        self._load_or_create_indexes()
+        
+        # 标记为已初始化
+        self._initialized = True
+        logger.info("✅ 向量记忆服务初始化完成（单例模式）")
+    
+    def _setup_huggingface_config(self):
+        """设置HuggingFace镜像和缓存配置"""
+        # 设置HuggingFace镜像（如果配置了）
+        if hasattr(settings, 'HF_ENDPOINT') and settings.HF_ENDPOINT:
+            os.environ['HF_ENDPOINT'] = settings.HF_ENDPOINT
+            logger.info(f"🌐 已设置HuggingFace镜像: {settings.HF_ENDPOINT}")
+        
+        # 设置离线模式（如果配置了）
+        if hasattr(settings, 'HF_HUB_OFFLINE') and settings.HF_HUB_OFFLINE:
+            os.environ['HF_HUB_OFFLINE'] = str(settings.HF_HUB_OFFLINE)
+            logger.info(f"🔒 HuggingFace离线模式: {settings.HF_HUB_OFFLINE}")
+        
+        # 设置缓存目录（如果配置了）
+        if hasattr(settings, 'HF_HUB_CACHE_DIR') and settings.HF_HUB_CACHE_DIR:
+            os.environ['HF_HUB_CACHE_DIR'] = settings.HF_HUB_CACHE_DIR
+            logger.info(f"💾 HuggingFace缓存目录: {settings.HF_HUB_CACHE_DIR}")
+    
+    def _check_model_cache(self, model_name: str) -> bool:
+        """检查模型是否已缓存在本地"""
+        try:
+            from huggingface_hub import snapshot_download
+            cache_dir = os.environ.get('HF_HUB_CACHE_DIR', None)
+            model_path = snapshot_download(
+                repo_id=model_name,
+                cache_dir=cache_dir,
+                local_files_only=True  # 仅检查本地，不下载
+            )
+            logger.info(f"✅ 检测到本地缓存模型: {model_path}")
+            return True
+        except Exception as e:
+            logger.debug(f"模型未在本地缓存: {model_name}, 原因: {e}")
+            return False
+    
+    def _load_embedding_model(self, model_name: str):
+        """
+        加载嵌入模型，优先使用本地缓存
+        
+        Args:
+            model_name: 模型名称
+            
+        Returns:
+            SentenceTransformer模型实例
+        """
+        # 首先检查本地缓存
+        logger.info(f"🔍 检查本地模型缓存: {model_name}")
+        if self._check_model_cache(model_name):
+            logger.info(f"⏳ 从本地缓存加载模型: {model_name}")
+            try:
+                model = SentenceTransformer(model_name, local_files_only=True)
+                logger.info(f"✅ 成功从本地缓存加载模型: {model_name}")
+                return model
+            except Exception as e:
+                logger.warning(f"从本地缓存加载失败，尝试在线下载: {e}")
+        
+        # 本地缓存不存在或加载失败，尝试在线下载
+        logger.info(f"⏳ 从在线源加载模型: {model_name}")
+        mirror_info = ""
+        if 'HF_ENDPOINT' in os.environ:
+            mirror_info = f" (使用镜像: {os.environ['HF_ENDPOINT']})"
+        
+        try:
+            model = SentenceTransformer(model_name)
+            logger.info(f"✅ 成功加载嵌入模型: {model_name}{mirror_info}")
+            return model
+        except Exception as e:
+            logger.error(f"❌ 在线加载模型失败: {model_name}, 错误: {e}")
+            
+            # 尝试使用备用模型
+            backup_model = "all-MiniLM-L6-v2"
+            logger.info(f"⏳ 尝试加载备用模型: {backup_model}")
+            
+            try:
+                # 先检查备用模型的本地缓存
+                if self._check_model_cache(backup_model):
+                    model = SentenceTransformer(backup_model, local_files_only=True)
+                    logger.info(f"✅ 成功从本地缓存加载备用模型: {backup_model}")
+                else:
+                    model = SentenceTransformer(backup_model)
+                    logger.info(f"✅ 成功在线加载备用模型: {backup_model}{mirror_info}")
+                return model
+            except Exception as backup_error:
+                logger.error(f"❌ 加载备用模型也失败: {backup_error}")
+                raise RuntimeError(
+                    f"无法加载任何嵌入模型。主模型 '{model_name}' 和备用模型 '{backup_model}' 都加载失败。\n"
+                    f"主模型错误: {e}\n"
+                    f"备用模型错误: {backup_error}\n"
+                    f"建议: 1) 检查网络连接 2) 配置HF_ENDPOINT镜像 3) 手动下载模型到本地"
+                )
     
     def _load_or_create_indexes(self):
         """加载或创建FAISS索引"""

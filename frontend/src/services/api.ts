@@ -177,6 +177,29 @@ export const tripApi = {
   },
 
   /**
+   * 获取用户所有行程列表
+   */
+  async getTripsList(): Promise<TripPlanResponse[]> {
+    return apiClient.get('/api/v1/trips/list')
+  },
+
+  /**
+   * 获取指定行程详情
+   * @param tripId 行程ID
+   */
+  async getTripDetail(tripId: string): Promise<TripPlanResponse> {
+    return apiClient.get(`/api/v1/trips/${tripId}`)
+  },
+
+  /**
+   * 删除指定行程
+   * @param tripId 行程ID
+   */
+  async deleteTrip(tripId: string): Promise<{ message: string }> {
+    return apiClient.delete(`/api/v1/trips/${tripId}`)
+  },
+
+  /**
    * 健康检查
    */
   async healthCheck(): Promise<{ status: string }> {

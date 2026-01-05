@@ -23,6 +23,7 @@ class ErrorCode(IntEnum):
     NO_ATTRACTIONS_FOUND = 2004
     NO_HOTELS_FOUND = 2005
     WEATHER_QUERY_FAILED = 2006
+    UNSUPPORTED_CITY = 2007
     
     # 服务错误 (3000-3999)
     LLM_SERVICE_ERROR = 3000
@@ -58,6 +59,7 @@ ERROR_MESSAGES = {
     ErrorCode.NO_ATTRACTIONS_FOUND: "未找到相关景点",
     ErrorCode.NO_HOTELS_FOUND: "未找到相关酒店",
     ErrorCode.WEATHER_QUERY_FAILED: "天气查询失败",
+    ErrorCode.UNSUPPORTED_CITY: "该城市暂不支持精细规划",
     
     ErrorCode.LLM_SERVICE_ERROR: "LLM服务错误",
     ErrorCode.LLM_TIMEOUT: "LLM服务超时",

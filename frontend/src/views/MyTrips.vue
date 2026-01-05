@@ -109,19 +109,21 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
-  Calendar, 
-  Wallet, 
-  Clock, 
-  View, 
-  Edit, 
-  Delete, 
-  Plus 
+import {
+  Calendar,
+  Wallet,
+  Clock,
+  View,
+  Edit,
+  Delete,
+  Plus
 } from '@element-plus/icons-vue'
 import type { TripPlanResponse } from '@/types'
+import { tripApi } from '@/services/api'
 
 const router = useRouter()
 const tripsList = ref<Array<{ id: string; trip_title: string; created_at: string } & TripPlanResponse>>([])
+const loading = ref(false)
 
 // 格式化日期
 const formatDate = (dateString: string) => {
@@ -139,21 +141,60 @@ const formatDate = (dateString: string) => {
 }
 
 // 加载行程列表
-const loadTrips = () => {
+const loadTrips = async () => {
+  loading.value = true
   try {
-    const savedTrips = localStorage.getItem('myTrips')
-    if (savedTrips) {
-      tripsList.value = JSON.parse(savedTrips)
-    }
+    // 优先从后端API获取行程列表
+    const trips = await tripApi.getTripsList()
+    tripsList.value = trips
+    
+    // 同步到localStorage作为缓存
+    localStorage.setItem('myTrips', JSON.stringify(trips))
   } catch (error) {
-    console.error('加载行程列表失败:', error)
-    ElMessage.error('加载行程列表失败')
+    console.error('从后端API加载失败，使用本地缓存:', error)
+    
+    // 降级：使用localStorage缓存的数据
+    try {
+      const savedTrips = localStorage.getItem('myTrips')
+      if (savedTrips) {
+        tripsList.value = JSON.parse(savedTrips)
+        ElMessage.warning('网络异常，已加载本地缓存数据')
+      }
+    } catch (err) {
+      console.error('加载行程列表失败:', err)
+      ElMessage.error('加载行程列表失败')
+    }
+  } finally {
+    loading.value = false
   }
 }
 
 // 查看行程
-const viewTrip = (index: number) => {
+const viewTrip = async (index: number) => {
   const trip = tripsList.value[index]
+  
+  // 如果有trip.id，尝试从后端获取完整数据
+  if (trip.id) {
+    try {
+      const fullTrip = await tripApi.getTripDetail(trip.id)
+      
+      // 保存到sessionStorage
+      sessionStorage.setItem('currentTripPlan', JSON.stringify(fullTrip))
+      
+      // 跳转到结果页面
+      router.push({
+        name: 'Result',
+        state: { tripPlan: fullTrip }
+      })
+      return
+    } catch (error) {
+      console.error('从后端获取行程详情失败，使用本地数据:', error)
+      ElMessage.warning('获取详情失败，使用本地数据')
+    }
+  }
+  
+  // 降级：使用本地已有数据
+  sessionStorage.setItem('currentTripPlan', JSON.stringify(trip))
   router.push({
     name: 'Result',
     state: { tripPlan: trip }
@@ -172,6 +213,8 @@ const editTrip = (index: number) => {
 // 删除行程
 const deleteTrip = async (index: number) => {
   try {
+    const trip = tripsList.value[index]
+    
     await ElMessageBox.confirm(
       '确定要删除这个行程吗？此操作不可恢复。',
       '确认删除',
@@ -182,9 +225,26 @@ const deleteTrip = async (index: number) => {
       }
     )
     
+    // 如果有trip.id，从后端删除
+    if (trip.id) {
+      try {
+        await tripApi.deleteTrip(trip.id)
+        ElMessage.success('行程已删除')
+      } catch (error) {
+        console.error('从后端删除行程失败:', error)
+        ElMessage.error('删除失败，请重试')
+        return
+      }
+    } else {
+      // 没有id的情况，只删除本地缓存
+      ElMessage.success('行程已删除（仅本地）')
+    }
+    
+    // 从本地列表中移除
     tripsList.value.splice(index, 1)
+    
+    // 更新localStorage缓存
     saveTrips()
-    ElMessage.success('行程已删除')
   } catch {
     // 用户取消
   }

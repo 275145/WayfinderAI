@@ -96,9 +96,31 @@ class EnhancedAgent(SimpleAgent):
                 tools_section += "工具调用结果会自动插入到对话中，然后你可以基于结果继续回答。\n"
                 base_prompt += tools_section
         
-        # 添加记忆上下文
+        # 添加记忆上下文（性能优化：只在context_manager中没有记忆时才检索）
         if self.user_id:
-            memory_context = self._get_memory_context()
+            # 优先从context_manager获取已检索的记忆
+            memory_context = ""
+            if self.context_manager:
+                user_memories = self.context_manager.get_shared_data("user_memories")
+                knowledge_memories = self.context_manager.get_shared_data("knowledge_memories")
+                
+                if user_memories or knowledge_memories:
+                    # 使用已检索的记忆（避免重复检索）
+                    parts = []
+                    if user_memories:
+                        mem_texts = [mem.get("text_representation", "")[:100] for mem in user_memories]
+                        parts.append(f"用户历史记忆: {'; '.join(mem_texts)}")
+                    if knowledge_memories:
+                        mem_texts = [mem.get("text_representation", "")[:100] for mem in knowledge_memories]
+                        parts.append(f"相关知识: {'; '.join(mem_texts)}")
+                    memory_context = "\n".join(parts)
+                    logger.debug(f"{self.name} 使用context_manager中的记忆，跳过重复检索")
+            
+            # 如果context_manager中没有，才进行检索（降级方案）
+            if not memory_context:
+                memory_context = self._get_memory_context()
+                logger.debug(f"{self.name} context_manager中没有记忆，执行向量检索")
+            
             if memory_context:
                 memory_section = "\n\n## 相关记忆信息\n"
                 memory_section += "以下是与当前任务相关的历史信息，你可以参考这些信息来更好地完成任务：\n"

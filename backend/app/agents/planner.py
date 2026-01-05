@@ -1,5 +1,6 @@
 import json
 import math
+import asyncio
 from datetime import datetime
 from app.models.trip_model import TripPlanRequest, TripPlanResponse
 from app.models.common_model import Attraction, Hotel, Weather
@@ -9,6 +10,7 @@ from typing import List, Optional, Tuple
 from app.tools.mcp_tool import MCPTool
 from app.config import settings
 from app.services.unsplash_service import UnsplashService
+from concurrent.futures import ThreadPoolExecutor, as_completed
 # from app.services.memory_service import memory_service  # 替换为向量记忆服务
 from app.services.vector_memory_service import VectorMemoryService
 from app.services.context_manager import ContextManager, get_context_manager
@@ -22,18 +24,45 @@ from app.agents.specialized_agents import (
 from hello_agents import ToolRegistry
 from app.observability.logger import get_request_id
 
-# 主要城市的经纬度范围（用于验证）
+# 主要城市的经纬度范围（用于验证）- 扩展至30个热门旅游城市
 CITY_BOUNDS = {
+    # 一线城市
     "北京": {"lat_min": 39.4, "lat_max": 41.1, "lng_min": 115.7, "lng_max": 117.4},
     "上海": {"lat_min": 30.7, "lat_max": 31.9, "lng_min": 120.8, "lng_max": 122.2},
-    "杭州": {"lat_min": 30.0, "lat_max": 30.5, "lng_min": 119.5, "lng_max": 120.5},
     "广州": {"lat_min": 22.7, "lat_max": 23.8, "lng_min": 112.9, "lng_max": 114.0},
     "深圳": {"lat_min": 22.4, "lat_max": 22.9, "lng_min": 113.7, "lng_max": 114.6},
+    
+    # 新一线城市
     "成都": {"lat_min": 30.4, "lat_max": 30.9, "lng_min": 103.9, "lng_max": 104.5},
+    "杭州": {"lat_min": 30.0, "lat_max": 30.5, "lng_min": 119.5, "lng_max": 120.5},
+    "重庆": {"lat_min": 29.3, "lat_max": 29.9, "lng_min": 106.2, "lng_max": 106.8},
+    "武汉": {"lat_min": 30.3, "lat_max": 31.0, "lng_min": 113.9, "lng_max": 114.6},
     "西安": {"lat_min": 34.0, "lat_max": 34.5, "lng_min": 108.7, "lng_max": 109.2},
-    "南京": {"lat_min": 31.9, "lat_max": 32.2, "lng_min": 118.4, "lng_max": 119.2},
     "苏州": {"lat_min": 31.1, "lat_max": 31.5, "lng_min": 120.3, "lng_max": 121.0},
+    "天津": {"lat_min": 38.9, "lat_max": 39.6, "lng_min": 116.9, "lng_max": 117.9},
+    "南京": {"lat_min": 31.9, "lat_max": 32.2, "lng_min": 118.4, "lng_max": 119.2},
+    "长沙": {"lat_min": 28.1, "lat_max": 28.4, "lng_min": 112.8, "lng_max": 113.2},
+    "郑州": {"lat_min": 34.4, "lat_max": 34.9, "lng_min": 113.4, "lng_max": 113.9},
+    
+    # 热门旅游城市
     "厦门": {"lat_min": 24.4, "lat_max": 24.6, "lng_min": 118.0, "lng_max": 118.2},
+    "青岛": {"lat_min": 35.9, "lat_max": 36.4, "lng_min": 119.9, "lng_max": 120.7},
+    "大连": {"lat_min": 38.7, "lat_max": 39.2, "lng_min": 121.3, "lng_max": 122.0},
+    "三亚": {"lat_min": 18.1, "lat_max": 18.4, "lng_min": 109.3, "lng_max": 109.7},
+    "丽江": {"lat_min": 26.8, "lat_max": 27.2, "lng_min": 100.1, "lng_max": 100.5},
+    "桂林": {"lat_min": 25.1, "lat_max": 25.5, "lng_min": 110.1, "lng_max": 110.6},
+    "昆明": {"lat_min": 24.7, "lat_max": 25.3, "lng_min": 102.5, "lng_max": 103.1},
+    "哈尔滨": {"lat_min": 45.5, "lat_max": 46.0, "lng_min": 126.4, "lng_max": 127.1},
+    "沈阳": {"lat_min": 41.5, "lat_max": 42.0, "lng_min": 123.2, "lng_max": 123.8},
+    "济南": {"lat_min": 36.5, "lat_max": 36.8, "lng_min": 116.8, "lng_max": 117.3},
+    
+    # 特色旅游城市
+    "黄山": {"lat_min": 29.8, "lat_max": 30.2, "lng_min": 118.1, "lng_max": 118.5},
+    "张家界": {"lat_min": 28.9, "lat_max": 29.3, "lng_min": 110.2, "lng_max": 110.7},
+    "敦煌": {"lat_min": 39.8, "lat_max": 40.3, "lng_min": 94.4, "lng_max": 95.1},
+    "拉萨": {"lat_min": 29.5, "lat_max": 30.0, "lng_min": 90.9, "lng_max": 91.5},
+    "乌鲁木齐": {"lat_min": 43.7, "lat_max": 44.2, "lng_min": 87.4, "lng_max": 88.0},
+    "宁波": {"lat_min": 29.8, "lat_max": 30.0, "lng_min": 121.3, "lng_max": 121.8},
 }
 # 注意：Agent提示词已移至 specialized_agents.py
 class PlannerAgent:
@@ -75,16 +104,25 @@ class PlannerAgent:
             是否在范围内
         """
         if city not in CITY_BOUNDS:
-            # 如果城市不在预定义列表中，使用更宽松的验证
-            # 可以根据需要扩展城市列表
-            logger.warning(f"城市 {city} 不在预定义列表中，跳过严格验证")
-            return True
+            # 如果城市不在预定义列表中，给出警告并拒绝验证
+            logger.warning(
+                f"⚠️ 城市 '{city}' 不在支持的城市范围内，该城市可能无法提供精确的行程规划。"
+                f"目前支持的城市包括：{', '.join(list(CITY_BOUNDS.keys())[:10])} 等30个热门旅游城市。"
+            )
+            return False  # 不再宽容处理，拒绝不在列表中的城市
         
         bounds = CITY_BOUNDS[city]
-        return (
+        is_valid = (
             bounds["lat_min"] <= lat <= bounds["lat_max"] and
             bounds["lng_min"] <= lng <= bounds["lng_max"]
         )
+        
+        if not is_valid:
+            logger.warning(
+                f"⚠️ 位置 ({lat}, {lng}) 不在城市 '{city}' 的合理范围内，该景点可能不属于目标城市"
+            )
+        
+        return is_valid
     
     def _calculate_distance(self, lat1: float, lng1: float, lat2: float, lng2: float) -> float:
         """
@@ -356,23 +394,54 @@ class PlannerAgent:
         
         # 执行规划流程
         try:
-            # 1. 景点搜索
-            logger.info("开始景点搜索...")
+            # 性能优化：并行执行景点、酒店、天气查询
+            logger.info("🚀 开始并行执行智能体查询（景点、酒店、天气）...")
+            
+            # 构建查询
             attraction_query = self._build_attraction_query(request)
-            attractions = attraction_agent.run(attraction_query)
-            logger.info(f"景点搜索完成: {attractions[:200]}...")
-            
-            # 2. 酒店推荐
-            logger.info("开始酒店推荐...")
             hotel_query = self._build_hotel_query(request)
-            hotels = hotel_agent.run(hotel_query)
-            logger.info(f"酒店推荐完成: {hotels[:200]}...")
-            
-            # 3. 天气查询
-            logger.info("开始天气查询...")
             weather_query = f"请查询{request.destination}的天气信息，日期范围：{request.start_date} 到 {request.end_date}"
-            weather = weather_agent.run(weather_query)
-            logger.info(f"天气查询完成: {weather[:200]}...")
+            
+            # 使用线程池并行执行三个独立查询
+            attractions = None
+            hotels = None
+            weather = None
+            
+            with ThreadPoolExecutor(max_workers=3, thread_name_prefix="agent_query") as executor:
+                # 提交三个任务
+                future_attractions = executor.submit(attraction_agent.run, attraction_query)
+                future_hotels = executor.submit(hotel_agent.run, hotel_query)
+                future_weather = executor.submit(weather_agent.run, weather_query)
+                
+                # 等待并获取结果（带异常处理）
+                # 1. 获取景点搜索结果
+                logger.info("  等待景点搜索结果...")
+                try:
+                    attractions = future_attractions.result(timeout=120)
+                    logger.info(f"✅ 景点搜索完成: {attractions[:200] if attractions else '无结果'}...")
+                except Exception as e:
+                    logger.error(f"❌ 景点搜索失败: {e}，使用降级策略")
+                    attractions = f"未找到{request.destination}相关景点信息，请参考通用旅游攻略"
+                
+                # 2. 获取酒店推荐结果
+                logger.info("  等待酒店推荐结果...")
+                try:
+                    hotels = future_hotels.result(timeout=120)
+                    logger.info(f"✅ 酒店推荐完成: {hotels[:200] if hotels else '无结果'}...")
+                except Exception as e:
+                    logger.error(f"❌ 酒店推荐失败: {e}，使用降级策略")
+                    hotels = f"未找到{request.destination}相关酒店信息，请根据预算选择住宿"
+                
+                # 3. 获取天气查询结果
+                logger.info("  等待天气查询结果...")
+                try:
+                    weather = future_weather.result(timeout=120)
+                    logger.info(f"✅ 天气查询完成: {weather[:200] if weather else '无结果'}...")
+                except Exception as e:
+                    logger.error(f"❌ 天气查询失败: {e}，使用降级策略")
+                    weather = f"未能获取{request.destination}天气信息，建议出行前查看实时天气预报"
+            
+            logger.info("🎯 所有并行查询完成！")
             
             # 4. 行程规划
             logger.info("开始行程规划...")
@@ -393,36 +462,66 @@ class PlannerAgent:
             # 6. 验证和过滤地理位置
             validated_plan = self._validate_and_filter_plan(validated_plan, request.destination)
             
-            # 7. 为景点添加图片（优化搜索关键词）
+            # 7. 为景点添加图片（批量异步搜索 - 性能优化）
+            logger.info("🚀 开始批量异步搜索景点图片...")
+            
+            # 收集所有景点和对应的搜索关键词
+            attractions_to_search = []
             for day in validated_plan.days:
                 for attraction in day.attractions:
-                    # 如果已有图片且不为空列表，跳过
-                    # if attraction.image_urls and len(attraction.image_urls) > 0:
-                    #     continue
+                    # 构造搜索关键词：优先用"景点名 + 城市"
+                    search_query = f"{attraction.name} {request.destination}"
+                    attractions_to_search.append({
+                        'attraction': attraction,
+                        'query': search_query
+                    })
+            
+            logger.info(f"📸 需要为 {len(attractions_to_search)} 个景点搜索图片")
+            
+            # 批量异步获取图片URL
+            if attractions_to_search:
+                # 提取所有查询关键词
+                queries = [item['query'] for item in attractions_to_search]
+                
+                # 使用异步批量搜索
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    image_urls = loop.run_until_complete(
+                        self.unsplash_service.fetch_images_batch(
+                            queries=queries,
+                            use_fallback=True,  # 失败时使用占位图
+                            use_cache=True  # 使用缓存
+                        )
+                    )
                     
-                    # 构造搜索关键词：优先用"景点名 + 城市"，失败则只用城市
-                    search_queries = [
-                        f"{attraction.name} {request.destination}",  # 完整名称 + 城市
-                        f"{attraction.name}",  # 只用景点名
-                        f"{request.destination} landmark"  # 兜底：城市地标
-                    ]
-                    
-                    logger.info(f"为景点 '{attraction.name}' 搜索图片，尝试关键词: {search_queries[0]}")
-                    
-                    image_url = None
-                    for query in search_queries:
-                        image_url = self.unsplash_service.get_photo_url(query)
+                    # 将结果分配给对应的景点
+                    success_count = 0
+                    fallback_count = 0
+                    for item, image_url in zip(attractions_to_search, image_urls):
+                        attraction = item['attraction']
                         if image_url:
-                            logger.info(f"✅ 景点 '{attraction.name}' 成功获取图片: {image_url[:80]}...")
-                            break
+                            attraction.image_urls = [image_url]
+                            success_count += 1
                         else:
-                            logger.warning(f"⚠️ 关键词 '{query}' 未找到图片，尝试下一个")
+                            attraction.image_urls = []
+                            logger.warning(f"❌ 景点 '{attraction.name}' 未找到图片")
                     
-                    if image_url:
-                        attraction.image_urls = [image_url]
-                    else:
-                        logger.warning(f"❌ 景点 '{attraction.name}' 所有关键词均未找到图片，保持为空列表")
-                        attraction.image_urls = []
+                    logger.info(f"✅ 图片搜索完成: 成功 {success_count}/{len(attractions_to_search)}")
+                    
+                    # 输出缓存统计
+                    cache_stats = self.unsplash_service.get_cache_stats()
+                    logger.debug(f"📊 Unsplash缓存统计: {cache_stats}")
+                    
+                except Exception as e:
+                    logger.error(f"❌ 批量搜索图片失败: {e}")
+                    # 降级：设置空列表
+                    for item in attractions_to_search:
+                        item['attraction'].image_urls = []
+                finally:
+                    loop.close()
+            else:
+                logger.info("📸 没有需要搜索图片的景点")
             
             # 8. 存储用户偏好记忆
             self.memory_service.store_user_preference(
