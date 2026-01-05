@@ -25,7 +25,7 @@
                   </span>
                   <span class="meta-item">
                     <el-icon><Wallet /></el-icon>
-                    预算：¥{{ tripPlan.total_budget.total }}
+                    预算估算：¥{{ tripPlan.total_budget.total }}
                   </span>
                 </div>
               </div>

@@ -5,7 +5,7 @@
         <div class="card-header">
           <h3>💰 预算明细</h3>
           <div class="total-budget">
-            <span>总预算：</span>
+            <span>实际预算：</span>
             <span class="amount">¥{{ totalBudget.toFixed(2) }}</span>
           </div>
         </div>
