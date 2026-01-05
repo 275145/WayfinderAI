@@ -62,8 +62,8 @@ const displayName = computed(() => {
 
 // 计算用户头像URL
 const userAvatar = computed(() => {
-  // 可以根据用户信息生成头像URL或使用默认头像
-  return ''
+  // 从用户信息中获取头像URL
+  return authStore.user?.avatar_url || ''
 })
 
 // 处理下拉菜单命令

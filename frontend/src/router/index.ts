@@ -9,6 +9,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '智能行程规划', requiresAuth: false }
   },
   {
+    path: '/my-trips',
+    name: 'MyTrips',
+    component: () => import('@/views/MyTrips.vue'),
+    meta: { title: '我的行程', requiresAuth: true }
+  },
+  {
     path: '/result',
     name: 'Result',
     component: () => import('@/views/Result.vue'),

@@ -236,15 +236,6 @@
           </div>
         </el-card>
 
-        <!-- 预算统计 -->
-        <el-card>
-          <template #header>
-            <h3>💰 预算统计</h3>
-          </template>
-          <el-statistic title="总预算" :value="totalBudget" prefix="¥" :precision="2" />
-          <el-divider />
-          <el-statistic title="实际花费" :value="actualTotal" prefix="¥" :precision="2" />
-        </el-card>
       </el-col>
     </el-row>
   </div>
@@ -575,12 +566,20 @@ const saveAndPreview = () => {
 
 <style scoped lang="scss">
 .edit-plan-container {
-  padding: 20px;
-  background: #f5f7fa;
+  position: relative;
   min-height: 100vh;
+  padding: 32px 20px 40px;
+  /* 旅行主题渐变：蓝天到夕阳橙 */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 35%, #f093fb 70%, #f5576c 100%);
+  overflow: hidden;
 
   .header-card {
-    margin-bottom: 20px;
+    margin-bottom: 28px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 
     .header-content {
       display: flex;
@@ -589,12 +588,18 @@ const saveAndPreview = () => {
 
       h2 {
         margin: 0;
-        font-size: 24px;
+        font-size: 28px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: 1px;
       }
 
       .actions {
         display: flex;
-        gap: 12px;
+        gap: 16px;
       }
     }
   }
@@ -756,3 +761,4 @@ const saveAndPreview = () => {
   }
 }
 </style>
+

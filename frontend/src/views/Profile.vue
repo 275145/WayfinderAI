@@ -42,14 +42,17 @@
                 :show-file-list="false"
                 :before-upload="beforeAvatarUpload"
                 :on-change="handleAvatarChange"
+                :auto-upload="false"
                 action="#"
               >
                 <el-avatar :size="100" :src="avatarUrl">
-                  <el-icon><UserFilled /></el-icon>
+                  <el-icon v-if="!avatarUploading"><UserFilled /></el-icon>
+                  <el-icon v-else class="is-loading"><Loading /></el-icon>
                 </el-avatar>
-                <div class="avatar-mask">
-                  <el-icon><Camera /></el-icon>
-                  <span>更换头像</span>
+                <div class="avatar-mask" :class="{ uploading: avatarUploading }">
+                  <el-icon v-if="!avatarUploading"><Camera /></el-icon>
+                  <el-icon v-else class="is-loading"><Loading /></el-icon>
+                  <span>{{ avatarUploading ? '上传中...' : '更换头像' }}</span>
                 </div>
               </el-upload>
             </div>
@@ -236,7 +239,8 @@ import {
   Camera,
   Phone,
   InfoFilled,
-  Lock
+  Lock,
+  Loading
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -250,11 +254,14 @@ const passwordFormRef = ref<FormInstance>()
 const loading = ref(false)
 const passwordLoading = ref(false)
 const showPasswordDialog = ref(false)
+const avatarUploading = ref(false)  // 头像上传状态
 
 // 头像URL（用于显示/预览）
 const avatarUrl = ref('')
 // 原始头像URL（用于提交到后端）
 const originalAvatarUrl = ref('')
+// 临时保存待上传的文件
+const pendingAvatarFile = ref<File | null>(null)
 
 // 表单数据
 const formData = reactive({
@@ -327,21 +334,29 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (file) => {
   return true
 }
 
-// 头像选择变化时立即预览
-const handleAvatarChange: UploadProps['onChange'] = (uploadFile) => {
+// 头像选择变化时立即上传并预览
+const handleAvatarChange: UploadProps['onChange'] = async (uploadFile) => {
   if (uploadFile.raw) {
-    // 使用临时URL预览选中的图片
-    avatarUrl.value = URL.createObjectURL(uploadFile.raw)
-  }
-}
-
-// 头像上传成功
-// 注意：由于action="#"，这个函数实际上不会被调用
-// 实际的URL保存在avatarUrl中，通过handleAvatarChange设置
- const handleAvatarSuccess: UploadProps['onSuccess'] = (response) => {
-  ElMessage.success('头像上传成功')
-  if (response?.url) {
-    avatarUrl.value = response.url
+    avatarUploading.value = true
+    
+    try {
+      // 上传头像到服务器
+      const uploadResult = await authApi.uploadAvatar(uploadFile.raw)
+      
+      // 使用服务器返回的URL
+      avatarUrl.value = uploadResult.url
+      pendingAvatarFile.value = uploadFile.raw
+      
+      ElMessage.success('头像上传成功')
+    } catch (error: any) {
+      console.error('头像上传失败:', error)
+      ElMessage.error(error.message || '头像上传失败，请重试')
+      
+      // 恢复原头像
+      avatarUrl.value = originalAvatarUrl.value
+    } finally {
+      avatarUploading.value = false
+    }
   }
 }
 
@@ -370,10 +385,8 @@ const handleSubmit = async () => {
 
     try {
       // 构建更新请求
-      // 注意：如果avatarUrl是blob URL（以blob:开头），则使用原始头像URL
-      const finalAvatarUrl = avatarUrl.value.startsWith('blob:')
-        ? originalAvatarUrl.value
-        : avatarUrl.value
+      // 如果正在进行图片上传，使用当前的头像URL（已经是服务器返回的URL）
+      const finalAvatarUrl = avatarUrl.value
 
       const updateData: UpdateProfileRequest = {
         username: formData.username,
@@ -385,15 +398,19 @@ const handleSubmit = async () => {
         avatar_url: finalAvatarUrl || undefined
       }
 
+      console.log('提交用户资料更新:', updateData)
+
       // 调用更新用户信息API
       const updatedUser = await authApi.updateProfile(updateData)
 
       // 更新本地状态
       authStore.updateUser(updatedUser)
       originalAvatarUrl.value = updatedUser.avatar_url || ''
+      pendingAvatarFile.value = null
 
       ElMessage.success('保存成功！')
     } catch (error: any) {
+      console.error('保存用户资料失败:', error)
       ElMessage.error(error.message || '保存失败，请重试')
     } finally {
       loading.value = false

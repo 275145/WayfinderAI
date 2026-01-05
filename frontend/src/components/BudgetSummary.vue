@@ -77,81 +77,176 @@ interface Props {
 const props = defineProps<Props>()
 const activeCollapse = ref<string[]>([])
 
-// 计算总预算（后端已给出拆分字段和 total）
-const totalBudget = computed(() => props.tripPlan.total_budget?.total || 0)
+// 辅助函数：从门票价格中提取数值
+const extractPrice = (price: number | string): number => {
+  if (typeof price === 'number') {
+    return price
+  }
+  if (typeof price === 'string') {
+    if (price === '免费' || price === '0元' || price === '无') {
+      return 0
+    }
+    // 提取字符串中的数字（例如："60元" -> 60, "60 元/人" -> 60）
+    const match = price.match(/(\d+(\.\d+)?)/)
+    if (match) {
+      return parseFloat(match[1])
+    }
+  }
+  return 0
+}
 
-// 计算各类别预算（直接使用后端拆分好的字段，并按天拆成明细项）
+// 计算每日景点门票费用（基于实际景点的ticket_price）
+const calculateDailyAttractionCost = (day: TripPlanResponse['days'][0]): BudgetDetail['items'] => {
+  const items: BudgetDetail['items'] = []
+  
+  day.attractions.forEach((attraction, index) => {
+    const price = extractPrice(attraction.ticket_price)
+    if (price > 0) {
+      items.push({
+        name: attraction.name,
+        cost: price
+      })
+    }
+  })
+  
+  return items
+}
+
+// 计算每日餐饮费用（基于实际餐饮的cost_per_person）
+const calculateDailyDiningCost = (day: TripPlanResponse['days'][0]): BudgetDetail['items'] => {
+  const items: BudgetDetail['items'] = []
+  
+  day.dinings.forEach(dining => {
+    const cost = extractPrice(dining.cost_per_person)
+    if (cost > 0) {
+      items.push({
+        name: dining.name,
+        cost: cost
+      })
+    }
+  })
+  
+  return items
+}
+
+// 计算每日酒店费用（基于推荐酒店的价格）
+const calculateDailyHotelCost = (day: TripPlanResponse['days'][0]): BudgetDetail['items'] => {
+  const items: BudgetDetail['items'] = []
+  
+  if (day.recommended_hotel) {
+    const price = extractPrice(day.recommended_hotel.price)
+    if (price > 0) {
+      items.push({
+        name: day.recommended_hotel.name,
+        cost: price
+      })
+    }
+  }
+  
+  return items
+}
+
+// 计算每日交通费用（基于每天预算的transport_cost，因为没有更详细的数据）
+const calculateDailyTransportCost = (day: TripPlanResponse['days'][0]): BudgetDetail['items'] => {
+  // 交通费用没有详细的子项，只能使用天级预算
+  if (day.budget.transport_cost > 0) {
+    return [{
+      name: `第 ${day.day} 天交通`,
+      cost: day.budget.transport_cost
+    }]
+  }
+  return []
+}
+
+// 计算真实的总预算（基于实际数据计算，不依赖后端的budget字段）
+const totalBudget = computed(() => {
+  const details = calculateBudgetDetails()
+  return details.reduce((sum, detail) => sum + detail.amount, 0)
+})
+
+// 计算各类别预算（基于实际数据）
 const budgetDetails = computed((): BudgetDetail[] => {
+  return calculateBudgetDetails()
+})
+
+// 统一预算计算逻辑
+const calculateBudgetDetails = (): BudgetDetail[] => {
   const details: BudgetDetail[] = []
-
-  const total = props.tripPlan.total_budget
-
+  
   // 1. 景点门票费用
-  if (total.attraction_ticket_cost > 0) {
-    const attractionItems: BudgetDetail['items'] = props.tripPlan.days
-      .filter(day => day.budget.attraction_ticket_cost > 0)
-      .map(day => ({
-        name: `第 ${day.day} 天景点门票`,
-        cost: day.budget.attraction_ticket_cost
-      }))
-
+  const allAttractionItems: BudgetDetail['items'] = []
+  let totalAttractionCost = 0
+  
+  props.tripPlan.days.forEach(day => {
+    const dailyItems = calculateDailyAttractionCost(day)
+    allAttractionItems.push(...dailyItems)
+    totalAttractionCost += dailyItems.reduce((sum, item) => sum + item.cost, 0)
+  })
+  
+  if (allAttractionItems.length > 0) {
     details.push({
       category: '景点门票',
-      amount: total.attraction_ticket_cost,
-      items: attractionItems.length ? attractionItems : [{ name: '景点门票合计', cost: total.attraction_ticket_cost }]
+      amount: totalAttractionCost,
+      items: allAttractionItems
     })
   }
-
+  
   // 2. 餐饮费用
-  if (total.dining_cost > 0) {
-    const diningItems: BudgetDetail['items'] = props.tripPlan.days
-      .filter(day => day.budget.dining_cost > 0)
-      .map(day => ({
-        name: `第 ${day.day} 天餐饮`,
-        cost: day.budget.dining_cost
-      }))
-
+  const allDiningItems: BudgetDetail['items'] = []
+  let totalDiningCost = 0
+  
+  props.tripPlan.days.forEach(day => {
+    const dailyItems = calculateDailyDiningCost(day)
+    allDiningItems.push(...dailyItems)
+    totalDiningCost += dailyItems.reduce((sum, item) => sum + item.cost, 0)
+  })
+  
+  if (allDiningItems.length > 0) {
     details.push({
       category: '餐饮美食',
-      amount: total.dining_cost,
-      items: diningItems.length ? diningItems : [{ name: '餐饮合计', cost: total.dining_cost }]
+      amount: totalDiningCost,
+      items: allDiningItems
     })
   }
-
+  
   // 3. 酒店住宿费用
-  if (total.hotel_cost > 0) {
-    const hotelItems: BudgetDetail['items'] = props.tripPlan.days
-      .filter(day => day.budget.hotel_cost > 0)
-      .map(day => ({
-        name: `第 ${day.day} 天酒店`,
-        cost: day.budget.hotel_cost
-      }))
-
+  const allHotelItems: BudgetDetail['items'] = []
+  let totalHotelCost = 0
+  
+  props.tripPlan.days.forEach(day => {
+    const dailyItems = calculateDailyHotelCost(day)
+    allHotelItems.push(...dailyItems)
+    totalHotelCost += dailyItems.reduce((sum, item) => sum + item.cost, 0)
+  })
+  
+  if (allHotelItems.length > 0) {
     details.push({
       category: '酒店住宿',
-      amount: total.hotel_cost,
-      items: hotelItems.length ? hotelItems : [{ name: '酒店合计', cost: total.hotel_cost }]
+      amount: totalHotelCost,
+      items: allHotelItems
     })
   }
-
+  
   // 4. 交通费用
-  if (total.transport_cost > 0) {
-    const transportItems: BudgetDetail['items'] = props.tripPlan.days
-      .filter(day => day.budget.transport_cost > 0)
-      .map(day => ({
-        name: `第 ${day.day} 天交通`,
-        cost: day.budget.transport_cost
-      }))
-
+  const allTransportItems: BudgetDetail['items'] = []
+  let totalTransportCost = 0
+  
+  props.tripPlan.days.forEach(day => {
+    const dailyItems = calculateDailyTransportCost(day)
+    allTransportItems.push(...dailyItems)
+    totalTransportCost += dailyItems.reduce((sum, item) => sum + item.cost, 0)
+  })
+  
+  if (allTransportItems.length > 0) {
     details.push({
       category: '交通费用',
-      amount: total.transport_cost,
-      items: transportItems.length ? transportItems : [{ name: '交通合计', cost: total.transport_cost }]
+      amount: totalTransportCost,
+      items: allTransportItems
     })
   }
-
+  
   return details
-})
+}
 
 // 计算预算分类概览
 const budgetCategories = computed(() => {

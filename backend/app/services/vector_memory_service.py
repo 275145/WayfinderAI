@@ -423,13 +423,20 @@ class VectorMemoryService:
             相似的知识记忆列表
         """
         try:
+            # 检查索引是否为空
+            if self.knowledge_memory_index.ntotal == 0:
+                logger.info(f"知识记忆索引为空，返回空结果 - Query: {query}")
+                return []
+            
             # 转换查询为向量
             query_vector = self._text_to_vector(query)
             
             # 在知识记忆中搜索
+            # 确保k值至少为1，避免FAISS在k=0时报错
+            k = min(self.knowledge_memory_index.ntotal, limit * 2)
             distances, indices = self.knowledge_memory_index.search(
-                np.array([query_vector]), 
-                min(self.knowledge_memory_index.ntotal, limit * 2)  # 搜索更多结果进行过滤
+                np.array([query_vector]),
+                k
             )
             
             # 过滤结果

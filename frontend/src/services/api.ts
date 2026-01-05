@@ -34,21 +34,54 @@ apiClient.interceptors.request.use(
   }
 )
 
+// 标志，防止多次登出操作
+let isLoggingOut = false
+
 // 响应拦截器
 apiClient.interceptors.response.use(
   (response) => {
     return response.data
   },
   (error) => {
+    // 阻止重复的登出操作
+    if (isLoggingOut) {
+      return Promise.reject(error)
+    }
+    
     // 如果是401错误，清除本地存储的认证信息
     if (error.response?.status === 401) {
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('user_info')
-      // 可以在这里重定向到登录页面
-      window.location.href = '/login'
+      console.error('认证失败 (401):', {
+        url: error.config?.url,
+        method: error.config?.method,
+        message: error.response?.data?.detail || '未授权访问',
+        timestamp: new Date().toISOString()
+      })
+      
+      // 检查是否是访问auth相关的API，如果是则不清除认证（可能是密码错误等）
+      const isAuthAPI = error.config?.url?.includes('/auth/')
+      
+      if (!isAuthAPI) {
+        isLoggingOut = true
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('user_info')
+        console.warn('由于认证失败，已清除本地认证状态')
+        
+        // 延迟重定向，避免在错误处理中立即跳转
+        setTimeout(() => {
+          window.location.href = '/login'
+          isLoggingOut = false
+        }, 100)
+      }
     }
     
     const errorMessage = error.response?.data?.detail || error.message || '请求失败'
+    console.error('API请求失败:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      message: errorMessage,
+      timestamp: new Date().toISOString()
+    })
+    
     return Promise.reject(new Error(errorMessage))
   }
 )
@@ -88,6 +121,28 @@ export const authApi = {
    */
   async changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
     return apiClient.post('/api/v1/auth/change-password', data)
+  },
+
+  /**
+   * 上传头像
+   */
+  async uploadAvatar(file: File): Promise<{ url: string }> {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    // 使用原始的axios而不使用apiClient，以避免拦截器干扰FormData
+    const token = localStorage.getItem('access_token')
+    return apiClient.post('/api/v1/auth/upload-avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          console.log(`上传进度: ${percentCompleted}%`)
+        }
+      }
+    })
   },
 
   /**

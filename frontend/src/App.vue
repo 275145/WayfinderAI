@@ -11,7 +11,7 @@
             <el-icon><House /></el-icon>
             首页
           </router-link>
-          <router-link to="/result" class="nav-item" v-if="authStore.isAuthenticated">
+          <router-link to="/my-trips" class="nav-item" v-if="authStore.isAuthenticated">
             <el-icon><Document /></el-icon>
             我的行程
           </router-link>
@@ -51,59 +51,75 @@ onMounted(() => {
 #app {
   width: 100%;
   min-height: 100vh;
-  background: #f5f7fa;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
 }
 
 .app-header {
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   padding: 0 20px;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000;
+  transition: all 0.3s ease;
 
   .header-content {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 60px;
+    height: 70px;
   }
 
   .logo {
     h1 {
       margin: 0;
-      font-size: 20px;
-      font-weight: 600;
-      color: #409eff;
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.5px;
     }
   }
 
   .nav-menu {
     display: flex;
-    gap: 20px;
+    gap: 8px;
+    background: rgba(102, 126, 234, 0.08);
+    padding: 4px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
 
     .nav-item {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 12px;
-      border-radius: 6px;
+      padding: 10px 16px;
+      border-radius: 8px;
       color: #606266;
       text-decoration: none;
-      transition: all 0.3s;
+      transition: all 0.3s ease;
+      font-weight: 500;
+      font-size: 15px;
 
       &:hover {
-        background: #f0f0f0;
-        color: #409eff;
+        background: rgba(102, 126, 234, 0.12);
+        color: #667eea;
+        transform: translateY(-1px);
       }
 
       &.router-link-active {
-        background: #409eff;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
       }
     }
   }
@@ -116,7 +132,10 @@ onMounted(() => {
 
 .main-content {
   flex: 1;
-  padding: 0;
+  padding: 24px 20px;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 }
 
 // 过渡动画
@@ -171,7 +190,7 @@ html, body {
 #app {
   width: 100%;
   min-height: 100vh;
-  background: #f5f7fa;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 // 过渡动画

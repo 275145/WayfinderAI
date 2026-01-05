@@ -43,6 +43,16 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "your-secret-key-change-in-production"
     JWT_EXPIRY_HOURS: int = 24
 
+    # Redis 配置
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: Optional[str] = None
+    REDIS_DECODE_RESPONSES: bool = True
+
+    # 密码加密配置
+    BCRYPT_ROUNDS: int = 12
+
     # 向量数据库配置
     VECTOR_MEMORY_DIR: str = "vector_memory"
     EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"

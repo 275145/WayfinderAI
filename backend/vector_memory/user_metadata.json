@@ -713,5 +713,1167 @@
     },
     "text_representation": "偏好类型: trip_preferences 目的地: 成都 旅行偏好: 美食, 休闲 酒店偏好: 舒适型, 高档型 预算水平: 宽裕",
     "timestamp": "2025-12-30T15:15:18.669599"
+  },
+  "10": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "preference",
+    "preference_type": "trip_request",
+    "data": {
+      "destination": "杭州",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "民宿"
+      ],
+      "budget": "经济",
+      "trip_title": "杭州自然与休闲之旅"
+    },
+    "text_representation": "偏好类型: trip_request 目的地: 杭州 旅行偏好: 自然, 休闲 酒店偏好: 经济型, 民宿 预算水平: 经济",
+    "timestamp": "2026-01-05T00:15:23.405444",
+    "similarity_score": 0.6112585067749023
+  },
+  "11": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "trip",
+    "data": {
+      "destination": "杭州",
+      "start_date": "2026-01-11",
+      "end_date": "2026-01-12",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "民宿"
+      ],
+      "budget": "经济",
+      "trip_title": "杭州自然与休闲之旅",
+      "days": [
+        {
+          "day": 1,
+          "theme": "西湖休闲游赏",
+          "weather": {
+            "date": "2026-01-11",
+            "day_weather": "多云转晴",
+            "night_weather": "晴",
+            "day_temp": "10",
+            "night_temp": "2",
+            "day_wind": "东风3级",
+            "night_wind": "东北风2级"
+          },
+          "recommended_hotel": {
+            "name": "杭州西湖银泰城喜来登酒店",
+            "address": "杭州市西湖区环城西路5号",
+            "location": {
+              "lat": 30.2592,
+              "lng": 120.1325
+            },
+            "price": "400元/晚",
+            "rating": "4.5",
+            "distance_to_main_attraction_km": 0.8
+          },
+          "attractions": [
+            {
+              "name": "西湖",
+              "type": "自然",
+              "rating": "4.7",
+              "suggested_duration_hours": 4.0,
+              "description": "西湖四季景色各异，是杭州最著名的自然景观之一。您可以在这里漫步湖畔，欣赏美景。",
+              "address": "杭州市西湖区断桥路1号",
+              "location": {
+                "lat": 30.2592,
+                "lng": 120.1325
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1753365310761-012a341f9210?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTglQTUlQkYlRTYlQjklOTYlMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzY3NTQzMzA0fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "楼外楼",
+              "address": "杭州市西湖区平湖门直街10号",
+              "location": {
+                "lat": 30.2573,
+                "lng": 120.1342
+              },
+              "cost_per_person": "80",
+              "rating": "4.5"
+            }
+          ],
+          "budget": {
+            "transport_cost": 50.0,
+            "dining_cost": 200.0,
+            "hotel_cost": 400.0,
+            "attraction_ticket_cost": 0.0,
+            "total": 650.0
+          }
+        },
+        {
+          "day": 2,
+          "theme": "钱塘江与文化遗址",
+          "weather": {
+            "date": "2026-01-12",
+            "day_weather": "晴",
+            "night_weather": "晴",
+            "day_temp": "12",
+            "night_temp": "3",
+            "day_wind": "东北风2级",
+            "night_wind": "北风1级"
+          },
+          "recommended_hotel": null,
+          "attractions": [
+            {
+              "name": "良渚古城遗址公园",
+              "type": "历史文化",
+              "rating": "4.5",
+              "suggested_duration_hours": 2.0,
+              "description": "了解杭州悠久历史文化的自然遗址，环境优美。",
+              "address": "杭州市余杭区良渚街道",
+              "location": {
+                "lat": 30.4567,
+                "lng": 120.4567
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1696513790795-e8fe7f017f02?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlOUQlQUQlRTUlQjclOUUlMjBsYW5kbWFya3xlbnwwfHx8fDE3Njc1NDMzMjR8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "60"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "知味观",
+              "address": "杭州市上城区中山南路270号",
+              "location": {
+                "lat": 30.2545,
+                "lng": 120.1825
+              },
+              "cost_per_person": "60",
+              "rating": "4.5"
+            }
+          ],
+          "budget": {
+            "transport_cost": 50.0,
+            "dining_cost": 200.0,
+            "hotel_cost": 300.0,
+            "attraction_ticket_cost": 250.0,
+            "total": 700.0
+          }
+        }
+      ]
+    },
+    "text_representation": "旅行行程 目的地: 杭州 时间: 2026-01-11 到 2026-01-12 偏好: 自然, 休闲 行程标题: 杭州自然与休闲之旅 景点: 西湖, 良渚古城遗址公园",
+    "timestamp": "2026-01-05T00:15:23.454594",
+    "similarity_score": 0.5961674451828003
+  },
+  "12": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "preference",
+    "preference_type": "trip_preferences",
+    "data": {
+      "destination": "杭州",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "民宿"
+      ],
+      "budget": "经济"
+    },
+    "text_representation": "偏好类型: trip_preferences 目的地: 杭州 旅行偏好: 自然, 休闲 酒店偏好: 经济型, 民宿 预算水平: 经济",
+    "timestamp": "2026-01-05T00:15:23.489408",
+    "similarity_score": 0.5877498388290405
+  },
+  "13": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "preference",
+    "preference_type": "trip_request",
+    "data": {
+      "destination": "北京",
+      "preferences": [
+        "历史",
+        "美食"
+      ],
+      "hotel_preferences": [
+        "舒适型",
+        "高档型"
+      ],
+      "budget": "宽裕",
+      "trip_title": "北京历史与美食之旅"
+    },
+    "text_representation": "偏好类型: trip_request 目的地: 北京 旅行偏好: 历史, 美食 酒店偏好: 舒适型, 高档型 预算水平: 宽裕",
+    "timestamp": "2026-01-05T00:33:58.148653",
+    "similarity_score": 0.6334953308105469
+  },
+  "14": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "trip",
+    "data": {
+      "destination": "北京",
+      "start_date": "2026-01-11",
+      "end_date": "2026-01-13",
+      "preferences": [
+        "历史",
+        "美食"
+      ],
+      "hotel_preferences": [
+        "舒适型",
+        "高档型"
+      ],
+      "budget": "宽裕",
+      "trip_title": "北京历史与美食之旅",
+      "days": [
+        {
+          "day": 1,
+          "theme": "故宫历史文化探索",
+          "weather": {
+            "date": "2026-01-11",
+            "day_weather": "晴",
+            "night_weather": "晴",
+            "day_temp": "-5",
+            "night_temp": "5",
+            "day_wind": "东风3级",
+            "night_wind": "东风3级"
+          },
+          "recommended_hotel": {
+            "name": "北京天伦王朝酒店",
+            "address": "北京市东城区王府井大街88号",
+            "location": {
+              "lat": 39.916935,
+              "lng": 116.405245
+            },
+            "price": "1000元/晚",
+            "rating": "4.5",
+            "distance_to_main_attraction_km": 1.2
+          },
+          "attractions": [
+            {
+              "name": "故宫",
+              "type": "历史文化",
+              "rating": "4.7",
+              "suggested_duration_hours": 4.0,
+              "description": "故宫是中国明清两代的皇家宫殿，也是世界上现存规模最大、保存最为完整的木质结构古建筑之一。",
+              "address": "北京市东城区景山前街4号",
+              "location": {
+                "lat": 39.916527,
+                "lng": 116.405226
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1621163771613-bd0a06ceb600?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlOTUlODUlRTUlQUUlQUIlMjAlRTUlOEMlOTclRTQlQkElQUN8ZW58MHx8fHwxNzY3NTQ0NDA1fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "60"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "全聚德烤鸭店",
+              "address": "北京市东城区王府井大街119号",
+              "location": {
+                "lat": 39.916667,
+                "lng": 116.405417
+              },
+              "cost_per_person": "200",
+              "rating": "4.5"
+            }
+          ],
+          "budget": {
+            "transport_cost": 200.0,
+            "dining_cost": 400.0,
+            "hotel_cost": 1000.0,
+            "attraction_ticket_cost": 60.0,
+            "total": 660.0
+          }
+        },
+        {
+          "day": 2,
+          "theme": "天安门广场与颐和园",
+          "weather": {
+            "date": "2026-01-12",
+            "day_weather": "多云",
+            "night_weather": "多云",
+            "day_temp": "-3",
+            "night_temp": "6",
+            "day_wind": "东北风4级",
+            "night_wind": "东北风4级"
+          },
+          "recommended_hotel": {
+            "name": "北京华尔道夫酒店",
+            "address": "北京市东城区金宝街99号",
+            "location": {
+              "lat": 39.917053,
+              "lng": 116.404807
+            },
+            "price": "1500元/晚",
+            "rating": "4.8",
+            "distance_to_main_attraction_km": 1.5
+          },
+          "attractions": [
+            {
+              "name": "天安门广场",
+              "type": "历史文化",
+              "rating": "4.5",
+              "suggested_duration_hours": 3.0,
+              "description": "天安门广场是世界上最大的城市中心广场，拥有丰富的历史文化遗产。",
+              "address": "北京市中心",
+              "location": {
+                "lat": 39.916527,
+                "lng": 116.405226
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1603258745248-e18b43394c00?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTUlQTQlQTklRTUlQUUlODklRTklOTclQTglRTUlQjklQkYlRTUlOUMlQkElMjAlRTUlOEMlOTclRTQlQkElQUN8ZW58MHx8fHwxNzY3NTQ0NDEyfDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            },
+            {
+              "name": "颐和园",
+              "type": "历史文化",
+              "rating": "4.6",
+              "suggested_duration_hours": 4.0,
+              "description": "颐和园是中国清朝时期的皇家园林，被誉为‘皇家园林博物馆’。",
+              "address": "北京市海淀区新建宫门路19号",
+              "location": {
+                "lat": 39.997105,
+                "lng": 116.300303
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1713409185043-e14b49a87dd3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTklQTIlOTAlRTUlOTIlOEMlRTUlOUIlQUQlMjAlRTUlOEMlOTclRTQlQkElQUN8ZW58MHx8fHwxNzY3NTQ0NDE4fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "30"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "大董烤鸭店",
+              "address": "北京市海淀区新建宫门路19号",
+              "location": {
+                "lat": 39.997105,
+                "lng": 116.300303
+              },
+              "cost_per_person": "250",
+              "rating": "4.7"
+            }
+          ],
+          "budget": {
+            "transport_cost": 200.0,
+            "dining_cost": 500.0,
+            "hotel_cost": 1500.0,
+            "attraction_ticket_cost": 80.0,
+            "total": 1280.0
+          }
+        },
+        {
+          "day": 3,
+          "theme": "北京猿人遗址",
+          "weather": {
+            "date": "2026-01-13",
+            "day_weather": "阴",
+            "night_weather": "阴",
+            "day_temp": "-2",
+            "night_temp": "7",
+            "day_wind": "北风2级",
+            "night_wind": "北风2级"
+          },
+          "recommended_hotel": {
+            "name": "北京天伦王朝酒店",
+            "address": "北京市东城区王府井大街88号",
+            "location": {
+              "lat": 39.916935,
+              "lng": 116.405245
+            },
+            "price": "1000元/晚",
+            "rating": "4.5",
+            "distance_to_main_attraction_km": 1.2
+          },
+          "attractions": [
+            {
+              "name": "北京猿人遗址",
+              "type": "自然",
+              "rating": "4.3",
+              "suggested_duration_hours": 2.0,
+              "description": "北京猿人遗址是中国发现最早、材料最丰富、研究最广泛的直立人遗址。",
+              "address": "北京市房山区周口店镇龙骨山北部",
+              "location": {
+                "lat": 39.966563,
+                "lng": 115.946165
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1648937521971-0732cf4451aa?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTUlOEMlOTclRTQlQkElQUMlMjBsYW5kbWFya3xlbnwwfHx8fDE3Njc1NDQ0Mzh8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "50"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "四季民福烤鸭店",
+              "address": "北京市房山区周口店镇龙骨山北部",
+              "location": {
+                "lat": 39.966563,
+                "lng": 115.946165
+              },
+              "cost_per_person": "180",
+              "rating": "4.4"
+            }
+          ],
+          "budget": {
+            "transport_cost": 200.0,
+            "dining_cost": 360.0,
+            "hotel_cost": 1000.0,
+            "attraction_ticket_cost": 50.0,
+            "total": 1110.0
+          }
+        }
+      ]
+    },
+    "text_representation": "旅行行程 目的地: 北京 时间: 2026-01-11 到 2026-01-13 偏好: 历史, 美食 行程标题: 北京历史与美食之旅 景点: 故宫, 天安门广场, 颐和园, 北京猿人遗址",
+    "timestamp": "2026-01-05T00:33:58.194775",
+    "similarity_score": 0.6780884265899658
+  },
+  "15": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "preference",
+    "preference_type": "trip_preferences",
+    "data": {
+      "destination": "北京",
+      "preferences": [
+        "历史",
+        "美食"
+      ],
+      "hotel_preferences": [
+        "舒适型",
+        "高档型"
+      ],
+      "budget": "宽裕"
+    },
+    "text_representation": "偏好类型: trip_preferences 目的地: 北京 旅行偏好: 历史, 美食 酒店偏好: 舒适型, 高档型 预算水平: 宽裕",
+    "timestamp": "2026-01-05T00:33:58.228539",
+    "similarity_score": 0.6206287145614624
+  },
+  "16": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "preference",
+    "preference_type": "trip_request",
+    "data": {
+      "destination": "北京",
+      "preferences": [
+        "历史",
+        "美食"
+      ],
+      "hotel_preferences": [
+        "舒适型",
+        "高档型"
+      ],
+      "budget": "中等",
+      "trip_title": "北京历史与美食之旅"
+    },
+    "text_representation": "偏好类型: trip_request 目的地: 北京 旅行偏好: 历史, 美食 酒店偏好: 舒适型, 高档型 预算水平: 中等",
+    "timestamp": "2026-01-05T01:43:20.048434",
+    "similarity_score": 0.6115542650222778
+  },
+  "17": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "trip",
+    "data": {
+      "destination": "北京",
+      "start_date": "2026-01-11",
+      "end_date": "2026-01-13",
+      "preferences": [
+        "历史",
+        "美食"
+      ],
+      "hotel_preferences": [
+        "舒适型",
+        "高档型"
+      ],
+      "budget": "中等",
+      "trip_title": "北京历史与美食之旅",
+      "days": [
+        {
+          "day": 1,
+          "theme": "古都历史探索",
+          "weather": {
+            "date": "2026-01-11",
+            "day_weather": "晴",
+            "night_weather": "晴",
+            "day_temp": "10",
+            "night_temp": "2",
+            "day_wind": "东风3级",
+            "night_wind": "东北风2级"
+          },
+          "recommended_hotel": {
+            "name": "北京王府井希尔顿酒店",
+            "address": "北京市东城区王府井大街238号",
+            "location": {
+              "lat": 39.91723,
+              "lng": 116.4074
+            },
+            "price": "800元/晚",
+            "rating": "4.7",
+            "distance_to_main_attraction_km": 0.5
+          },
+          "attractions": [
+            {
+              "name": "故宫",
+              "type": "历史文化",
+              "rating": "4.7",
+              "suggested_duration_hours": 3.0,
+              "description": "参观故宫博物院，了解中国古代宫廷建筑之美。",
+              "address": "北京市东城区景山前街4号",
+              "location": {
+                "lat": 39.91723,
+                "lng": 116.4074
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1621163771613-bd0a06ceb600?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlOTUlODUlRTUlQUUlQUIlMjAlRTUlOEMlOTclRTQlQkElQUN8ZW58MHx8fHwxNzY3NTQ0NDA1fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "60"
+            },
+            {
+              "name": "天安门广场",
+              "type": "历史文化",
+              "rating": "4.7",
+              "suggested_duration_hours": 2.0,
+              "description": "游览天安门广场，感受中国的历史文化。",
+              "address": "北京市中心",
+              "location": {
+                "lat": 39.91723,
+                "lng": 116.4074
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1603258745248-e18b43394c00?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTUlQTQlQTklRTUlQUUlODklRTklOTclQTglRTUlQjklQkYlRTUlOUMlQkElMjAlRTUlOEMlOTclRTQlQkElQUN8ZW58MHx8fHwxNzY3NTQ0NDEyfDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "全聚德烤鸭店",
+              "address": "北京市东城区前门大街18号",
+              "location": {
+                "lat": 39.91723,
+                "lng": 116.4074
+              },
+              "cost_per_person": "200",
+              "rating": "4.5"
+            }
+          ],
+          "budget": {
+            "transport_cost": 100.0,
+            "dining_cost": 200.0,
+            "hotel_cost": 800.0,
+            "attraction_ticket_cost": 120.0,
+            "total": 1220.0
+          }
+        },
+        {
+          "day": 2,
+          "theme": "皇家园林探秘",
+          "weather": {
+            "date": "2026-01-12",
+            "day_weather": "多云",
+            "night_weather": "多云",
+            "day_temp": "12",
+            "night_temp": "4",
+            "day_wind": "东北风2级",
+            "night_wind": "东北风2级"
+          },
+          "recommended_hotel": {
+            "name": "北京华尔道夫酒店",
+            "address": "北京市东城区金宝街99号",
+            "location": {
+              "lat": 39.9157,
+              "lng": 116.4614
+            },
+            "price": "1200元/晚",
+            "rating": "4.8",
+            "distance_to_main_attraction_km": 1.2
+          },
+          "attractions": [
+            {
+              "name": "颐和园",
+              "type": "历史文化",
+              "rating": "4.7",
+              "suggested_duration_hours": 4.0,
+              "description": "游览颐和园，欣赏中国保存最完整的皇家园林。",
+              "address": "北京市海淀区新建宫门路19号",
+              "location": {
+                "lat": 39.9966,
+                "lng": 116.2995
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1713409185043-e14b49a87dd3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTklQTIlOTAlRTUlOTIlOEMlRTUlOUIlQUQlMjAlRTUlOEMlOTclRTQlQkElQUN8ZW58MHx8fHwxNzY3NTQ0NDE4fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "60"
+            },
+            {
+              "name": "圆明园",
+              "type": "历史文化",
+              "rating": "4.7",
+              "suggested_duration_hours": 3.0,
+              "description": "参观圆明园，了解其辉煌与毁灭的历史。",
+              "address": "北京市海淀区圆明园西路",
+              "location": {
+                "lat": 39.9966,
+                "lng": 116.2995
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1698247122593-4f3c2e4b8219?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTUlOUMlODYlRTYlOTglOEUlRTUlOUIlQUQlMjAlRTUlOEMlOTclRTQlQkElQUN8ZW58MHx8fHwxNzY3NTQ4NTc2fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "40"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "四季民福烤鸭店",
+              "address": "北京市朝阳区三里屯北路19号",
+              "location": {
+                "lat": 40.0416,
+                "lng": 116.4538
+              },
+              "cost_per_person": "150",
+              "rating": "4.5"
+            }
+          ],
+          "budget": {
+            "transport_cost": 100.0,
+            "dining_cost": 150.0,
+            "hotel_cost": 1200.0,
+            "attraction_ticket_cost": 100.0,
+            "total": 1550.0
+          }
+        },
+        {
+          "day": 3,
+          "theme": "燕京文化体验",
+          "weather": {
+            "date": "2026-01-13",
+            "day_weather": "晴",
+            "night_weather": "晴",
+            "day_temp": "15",
+            "night_temp": "6",
+            "day_wind": "东风3级",
+            "night_wind": "东风3级"
+          },
+          "recommended_hotel": {
+            "name": "北京香山饭店",
+            "address": "北京市海淀区香山南辛村8号",
+            "location": {
+              "lat": 39.9966,
+              "lng": 116.2995
+            },
+            "price": "600元/晚",
+            "rating": "4.6",
+            "distance_to_main_attraction_km": 1.5
+          },
+          "attractions": [
+            {
+              "name": "北京猿人遗址",
+              "type": "历史文化",
+              "rating": "4.7",
+              "suggested_duration_hours": 2.0,
+              "description": "参观北京猿人遗址，了解人类早期文明。",
+              "address": "北京市房山区周口店镇龙骨山",
+              "location": {
+                "lat": 39.9966,
+                "lng": 116.2995
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1648937521971-0732cf4451aa?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTUlOEMlOTclRTQlQkElQUMlMjBsYW5kbWFya3xlbnwwfHx8fDE3Njc1NDQ0Mzh8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "50"
+            },
+            {
+              "name": "燕京八绝博物馆",
+              "type": "历史文化",
+              "rating": "4.5",
+              "suggested_duration_hours": 2.0,
+              "description": "参观燕京八绝博物馆，体验燕京八绝技艺的魅力。",
+              "address": "北京市西城区陶然亭南广大街22号",
+              "location": {
+                "lat": 39.91723,
+                "lng": 116.4074
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1633954935960-60dbe143edbd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTclODclOTUlRTQlQkElQUMlRTUlODUlQUIlRTclQkIlOUQlRTUlOEQlOUElRTclODklQTklRTklQTYlODYlMjAlRTUlOEMlOTclRTQlQkElQUN8ZW58MHx8fHwxNzY3NTQ4NjAwfDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "100"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "全聚德烤鸭店",
+              "address": "北京市朝阳区工体北路18号",
+              "location": {
+                "lat": 40.0416,
+                "lng": 116.4538
+              },
+              "cost_per_person": "180",
+              "rating": "4.5"
+            }
+          ],
+          "budget": {
+            "transport_cost": 100.0,
+            "dining_cost": 180.0,
+            "hotel_cost": 600.0,
+            "attraction_ticket_cost": 150.0,
+            "total": 1530.0
+          }
+        }
+      ]
+    },
+    "text_representation": "旅行行程 目的地: 北京 时间: 2026-01-11 到 2026-01-13 偏好: 历史, 美食 行程标题: 北京历史与美食之旅 景点: 故宫, 天安门广场, 颐和园, 圆明园, 北京猿人遗址, 燕京八绝博物馆",
+    "timestamp": "2026-01-05T01:43:20.091162"
+  },
+  "18": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "preference",
+    "preference_type": "trip_preferences",
+    "data": {
+      "destination": "北京",
+      "preferences": [
+        "历史",
+        "美食"
+      ],
+      "hotel_preferences": [
+        "舒适型",
+        "高档型"
+      ],
+      "budget": "中等"
+    },
+    "text_representation": "偏好类型: trip_preferences 目的地: 北京 旅行偏好: 历史, 美食 酒店偏好: 舒适型, 高档型 预算水平: 中等",
+    "timestamp": "2026-01-05T01:43:20.121403",
+    "similarity_score": 0.5980846881866455
+  },
+  "19": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "preference",
+    "preference_type": "trip_request",
+    "data": {
+      "destination": "成都",
+      "preferences": [
+        "美食",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "舒适型",
+        "高档型"
+      ],
+      "budget": "宽裕",
+      "trip_title": "成都美食与休闲之旅"
+    },
+    "text_representation": "偏好类型: trip_request 目的地: 成都 旅行偏好: 美食, 休闲 酒店偏好: 舒适型, 高档型 预算水平: 宽裕",
+    "timestamp": "2026-01-05T01:57:05.203290"
+  },
+  "20": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "trip",
+    "data": {
+      "destination": "成都",
+      "start_date": "2026-01-13",
+      "end_date": "2026-01-14",
+      "preferences": [
+        "美食",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "舒适型",
+        "高档型"
+      ],
+      "budget": "宽裕",
+      "trip_title": "成都美食与休闲之旅",
+      "days": [
+        {
+          "day": 1,
+          "theme": "春熙路购物与美食",
+          "weather": {
+            "date": "2026-01-13",
+            "day_weather": "多云转晴",
+            "night_weather": "晴",
+            "day_temp": "10",
+            "night_temp": "2",
+            "day_wind": "东风3级",
+            "night_wind": "南风2级"
+          },
+          "recommended_hotel": {
+            "name": "成都华尔道夫酒店",
+            "address": "成都市青羊区春熙路大悦城H馆8层",
+            "location": {
+              "lat": 30.665441,
+              "lng": 104.023854
+            },
+            "price": "1000元/晚",
+            "rating": "5.0",
+            "distance_to_main_attraction_km": 0.8
+          },
+          "attractions": [
+            {
+              "name": "春熙路",
+              "type": "购物",
+              "rating": "4.7",
+              "suggested_duration_hours": 2.0,
+              "description": "春熙路不仅是一个繁华的商业区，还汇集了许多知名的餐厅和小吃店，让您在享受购物的同时也能品尝到成都的地道美食。",
+              "address": "成都市青羊区春熙路",
+              "location": {
+                "lat": 30.666183,
+                "lng": 104.024185
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1622635272666-011cb854fc97?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlOTglQTUlRTclODYlOTklRTglQjclQUYlMjAlRTYlODglOTAlRTklODMlQkR8ZW58MHx8fHwxNzY3NTQ5Mzg1fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "蜀九香火锅店",
+              "address": "成都市青羊区春熙路1号",
+              "location": {
+                "lat": 30.665672,
+                "lng": 104.024421
+              },
+              "cost_per_person": "150",
+              "rating": "4.8"
+            },
+            {
+              "name": "陈麻婆豆腐店",
+              "address": "成都市青羊区春熙路1号",
+              "location": {
+                "lat": 30.665672,
+                "lng": 104.024421
+              },
+              "cost_per_person": "100",
+              "rating": "4.7"
+            }
+          ],
+          "budget": {
+            "transport_cost": 100.0,
+            "dining_cost": 250.0,
+            "hotel_cost": 1000.0,
+            "attraction_ticket_cost": 0.0,
+            "total": 1350.0
+          }
+        },
+        {
+          "day": 2,
+          "theme": "锦里古街与杜甫草堂",
+          "weather": {
+            "date": "2026-01-14",
+            "day_weather": "晴朗",
+            "night_weather": "晴",
+            "day_temp": "15",
+            "night_temp": "5",
+            "day_wind": "南风2级",
+            "night_wind": "北风1级"
+          },
+          "recommended_hotel": {
+            "name": "成都博舍酒店",
+            "address": "成都市武侯区锦里东路1号",
+            "location": {
+              "lat": 30.680436,
+              "lng": 104.055614
+            },
+            "price": "800元/晚",
+            "rating": "4.8",
+            "distance_to_main_attraction_km": 1.5
+          },
+          "attractions": [
+            {
+              "name": "成都锦里古街",
+              "type": "美食",
+              "rating": "4.7",
+              "suggested_duration_hours": 3.0,
+              "description": "成都锦里古街是一个充满四川传统文化气息的地方，您可以在这里品尝到各种地道的四川小吃和特色美食。",
+              "address": "成都市武侯区武侯祠大街231号",
+              "location": {
+                "lat": 30.681457,
+                "lng": 104.056175
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1731574555291-00cbf96f749c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlODglOTAlRTklODMlQkQlMjBsYW5kbWFya3xlbnwwfHx8fDE3Njc1NDk0MDZ8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            },
+            {
+              "name": "杜甫草堂",
+              "type": "历史文化",
+              "rating": "4.5",
+              "suggested_duration_hours": 2.0,
+              "description": "杜甫草堂是中国唐代著名诗人杜甫的故居，周围有许多餐馆提供川菜和其他当地特色美食。",
+              "address": "成都市青羊区青华路37号",
+              "location": {
+                "lat": 30.675448,
+                "lng": 104.034265
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1731574555291-00cbf96f749c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlODglOTAlRTklODMlQkQlMjBsYW5kbWFya3xlbnwwfHx8fDE3Njc1NDk0MDZ8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "40"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "张老记串串香",
+              "address": "成都市武侯区武侯祠大街231号",
+              "location": {
+                "lat": 30.681457,
+                "lng": 104.056175
+              },
+              "cost_per_person": "80",
+              "rating": "4.6"
+            }
+          ],
+          "budget": {
+            "transport_cost": 100.0,
+            "dining_cost": 150.0,
+            "hotel_cost": 800.0,
+            "attraction_ticket_cost": 40.0,
+            "total": 490.0
+          }
+        }
+      ]
+    },
+    "text_representation": "旅行行程 目的地: 成都 时间: 2026-01-13 到 2026-01-14 偏好: 美食, 休闲 行程标题: 成都美食与休闲之旅 景点: 春熙路, 成都锦里古街, 杜甫草堂",
+    "timestamp": "2026-01-05T01:57:05.237907"
+  },
+  "21": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "preference",
+    "preference_type": "trip_preferences",
+    "data": {
+      "destination": "成都",
+      "preferences": [
+        "美食",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "舒适型",
+        "高档型"
+      ],
+      "budget": "宽裕"
+    },
+    "text_representation": "偏好类型: trip_preferences 目的地: 成都 旅行偏好: 美食, 休闲 酒店偏好: 舒适型, 高档型 预算水平: 宽裕",
+    "timestamp": "2026-01-05T01:57:05.275813"
+  },
+  "22": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "preference",
+    "preference_type": "trip_request",
+    "data": {
+      "destination": "杭州",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "民宿"
+      ],
+      "budget": "经济",
+      "trip_title": "杭州自然与休闲之旅"
+    },
+    "text_representation": "偏好类型: trip_request 目的地: 杭州 旅行偏好: 自然, 休闲 酒店偏好: 经济型, 民宿 预算水平: 经济",
+    "timestamp": "2026-01-05T02:10:49.520449"
+  },
+  "23": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "trip",
+    "data": {
+      "destination": "杭州",
+      "start_date": "2026-01-11",
+      "end_date": "2026-01-12",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "民宿"
+      ],
+      "budget": "经济",
+      "trip_title": "杭州自然与休闲之旅",
+      "days": [
+        {
+          "day": 1,
+          "theme": "植物园与自然风光",
+          "weather": {
+            "date": "2026-01-11",
+            "day_weather": "多云",
+            "night_weather": "阴",
+            "day_temp": "5",
+            "night_temp": "2",
+            "day_wind": "东北风2级",
+            "night_wind": "北风1级"
+          },
+          "recommended_hotel": {
+            "name": "杭州植物园精品酒店",
+            "address": "杭州市西湖区玉泉路1号",
+            "location": {
+              "lat": 30.255,
+              "lng": 120.132
+            },
+            "price": "400元/晚",
+            "rating": "4.5",
+            "distance_to_main_attraction_km": 0.1
+          },
+          "attractions": [
+            {
+              "name": "杭州植物园",
+              "type": "自然",
+              "rating": "4.7",
+              "suggested_duration_hours": 4.0,
+              "description": "杭州植物园是一个集科研、科普、游览于一体的综合性植物园，园内有丰富的植物种类和美丽的自然景观。",
+              "address": "杭州市西湖区玉泉路1号",
+              "location": {
+                "lat": 30.255,
+                "lng": 120.132
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1696513790795-e8fe7f017f02?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlOUQlQUQlRTUlQjclOUUlMjBsYW5kbWFya3xlbnwwfHx8fDE3Njc1NDMzMjR8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "60"
+            },
+            {
+              "name": "钱塘江大桥",
+              "type": "自然",
+              "rating": "4.5",
+              "suggested_duration_hours": 2.0,
+              "description": "欣赏钱塘江的自然风光，同时也可以感受这座历史悠久的桥梁带来的震撼。",
+              "address": "杭州市滨江区江汉路1999号",
+              "location": {
+                "lat": 30.225,
+                "lng": 120.223
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1715245628884-b93666e687fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTklOTIlQjElRTUlQTElOTglRTYlQjElOUYlRTUlQTQlQTclRTYlQTElQTUlMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzY3NTUwMjI2fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "西湖边茶馆",
+              "address": "杭州市西湖区断桥路1号",
+              "location": {
+                "lat": 30.245,
+                "lng": 120.135
+              },
+              "cost_per_person": "50",
+              "rating": "4.3"
+            }
+          ],
+          "budget": {
+            "transport_cost": 50.0,
+            "dining_cost": 150.0,
+            "hotel_cost": 400.0,
+            "attraction_ticket_cost": 150.0,
+            "total": 750.0
+          }
+        },
+        {
+          "day": 2,
+          "theme": "寺庙与湿地公园",
+          "weather": {
+            "date": "2026-01-12",
+            "day_weather": "晴",
+            "night_weather": "多云",
+            "day_temp": "7",
+            "night_temp": "4",
+            "day_wind": "南风3级",
+            "night_wind": "东南风2级"
+          },
+          "recommended_hotel": {
+            "name": "杭州灵隐寺附近民宿",
+            "address": "杭州市西湖区灵隐路18号",
+            "location": {
+              "lat": 30.267,
+              "lng": 120.163
+            },
+            "price": "350元/晚",
+            "rating": "4.2",
+            "distance_to_main_attraction_km": 0.2
+          },
+          "attractions": [
+            {
+              "name": "灵隐寺",
+              "type": "宗教文化",
+              "rating": "4.5",
+              "suggested_duration_hours": 3.0,
+              "description": "灵隐寺周围环境优美，可以体验到自然与宗教文化的完美结合。",
+              "address": "杭州市西湖区灵隐路18号",
+              "location": {
+                "lat": 30.267,
+                "lng": 120.163
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1753364971896-a55ebc73361f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTclODElQjUlRTklOUElOTAlRTUlQUYlQkElMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzY3NTUwMjMyfDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            },
+            {
+              "name": "西溪国家湿地公园",
+              "type": "自然",
+              "rating": "4.7",
+              "suggested_duration_hours": 5.0,
+              "description": "西溪国家湿地公园是中国第一个国家湿地公园，这里不仅有美丽的自然景色，还有许多珍稀动植物。",
+              "address": "杭州市西湖区紫金港路1号",
+              "location": {
+                "lat": 30.267,
+                "lng": 120.163
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1696513790795-e8fe7f017f02?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlOUQlQUQlRTUlQjclOUUlMjBsYW5kbWFya3xlbnwwfHx8fDE3Njc1NDMzMjR8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "西溪湿地餐厅",
+              "address": "杭州市西湖区紫金港路1号",
+              "location": {
+                "lat": 30.267,
+                "lng": 120.163
+              },
+              "cost_per_person": "60",
+              "rating": "4.4"
+            }
+          ],
+          "budget": {
+            "transport_cost": 50.0,
+            "dining_cost": 250.0,
+            "hotel_cost": 350.0,
+            "attraction_ticket_cost": 0.0,
+            "total": 650.0
+          }
+        }
+      ]
+    },
+    "text_representation": "旅行行程 目的地: 杭州 时间: 2026-01-11 到 2026-01-12 偏好: 自然, 休闲 行程标题: 杭州自然与休闲之旅 景点: 杭州植物园, 钱塘江大桥, 灵隐寺, 西溪国家湿地公园",
+    "timestamp": "2026-01-05T02:10:49.566355"
+  },
+  "24": {
+    "user_id": "01a3379c-f974-4e8d-80f4-436ae47a6a2f",
+    "type": "preference",
+    "preference_type": "trip_preferences",
+    "data": {
+      "destination": "杭州",
+      "preferences": [
+        "自然",
+        "休闲"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "民宿"
+      ],
+      "budget": "经济"
+    },
+    "text_representation": "偏好类型: trip_preferences 目的地: 杭州 旅行偏好: 自然, 休闲 酒店偏好: 经济型, 民宿 预算水平: 经济",
+    "timestamp": "2026-01-05T02:10:49.597600"
   }
 }

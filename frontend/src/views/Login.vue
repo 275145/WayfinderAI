@@ -140,7 +140,8 @@ const loginRules = {
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: ['blur', 'change'] }
+    { min: 6, message: '密码长度不能少于6位', trigger: ['blur', 'change'] },
+    { max: 50, message: '密码长度不能超过50位', trigger: ['blur', 'change'] }
   ]
 }
 
@@ -148,11 +149,13 @@ const loginRules = {
 const registerRules = {
   username: [
     { required: true, message: '请输入账号', trigger: 'blur' },
-    { min: 2, message: '账号长度不能少于2位', trigger: ['blur', 'change'] }
+    { min: 2, message: '账号长度不能少于2位', trigger: ['blur', 'change'] },
+    { max: 20, message: '账号长度不能超过20位', trigger: ['blur', 'change'] }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: ['blur', 'change'] }
+    { min: 6, message: '密码长度不能少于6位', trigger: ['blur', 'change'] },
+    { max: 50, message: '密码长度不能超过50位', trigger: ['blur', 'change'] }
   ]
 }
 

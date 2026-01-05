@@ -2,14 +2,22 @@
 用户认证API接口
 提供登录、注册等功能
 """
-from fastapi import APIRouter, Request, HTTPException, status, Depends
+from fastapi import APIRouter, Request, HTTPException, status, Depends, UploadFile, File
 from pydantic import BaseModel, validator
 from typing import Optional
+import os
+import uuid
+from pathlib import Path
 from app.middleware.auth import AuthMiddleware, get_current_user, get_user_id
 from app.observability.logger import default_logger as logger
 from app.config import settings
+from app.services.redis_service import redis_service
 
 router = APIRouter()
+
+# 头像上传目录
+UPLOAD_DIR = Path("uploads/avatars")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # 用户模型
 class UserLogin(BaseModel):
@@ -61,9 +69,6 @@ class AuthToken(BaseModel):
     token_type: str
     user: UserResponse
 
-# 简单的用户存储（生产环境应使用数据库）
-USERS_DB = {}
-
 @router.post("/login", response_model=AuthToken)
 def login(request: Request, login_data: UserLogin):
     """
@@ -78,14 +83,10 @@ def login(request: Request, login_data: UserLogin):
     """
     logger.info(f"用户登录尝试 - 账号: {login_data.username}")
     
-    # 在简单存储中查找用户（生产环境应使用数据库验证）
-    user = None
-    for key, value in USERS_DB.items():
-        if value.get("username") == login_data.username:
-            user = value
-            break
+    # 使用Redis验证用户
+    user = redis_service.verify_user(login_data.username, login_data.password)
     
-    if not user or user.get("password") != login_data.password:
+    if not user:
         logger.warning(f"登录失败 - 账号: {login_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -130,31 +131,34 @@ def register(request: Request, register_data: UserRegister):
     """
     logger.info(f"用户注册尝试 - 账号: {register_data.username}")
     
-    # 检查用户是否已存在
-    for key, value in USERS_DB.items():
-        if value.get("username") == register_data.username:
-            logger.warning(f"注册失败，用户已存在 - 账号: {register_data.username}")
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="该账号已被注册"
-            )
-    
-    # 创建新用户（生产环境应使用数据库）
-    import uuid
-    user_id = str(uuid.uuid4())
-    # 使用用户名作为键
-    USERS_DB[f"email_{user_id}"] = {
-        "user_id": user_id,
-        "username": register_data.username,
-        "password": register_data.password,  # 生产环境应存储哈希值
-        "created_at": "2024-01-01T00:00:00",  # 简化时间戳
-        "phone": None,
-        "gender": "other",
-        "birthday": None,
-        "bio": None,
-        "travel_preferences": [],
-        "avatar_url": None
-    }
+    # 使用Redis创建用户
+    try:
+        user_id = str(uuid.uuid4())
+        user = redis_service.create_user(
+            user_id=user_id,
+            username=register_data.username,
+            password=register_data.password,
+            phone=None,
+            gender="other",
+            birthday=None,
+            bio=None,
+            travel_preferences=[],
+            avatar_url=None
+        )
+    except ValueError as e:
+        # 用户已存在
+        logger.warning(f"注册失败 - {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
+    except RuntimeError as e:
+        # 其他错误
+        logger.error(f"注册失败 - {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="注册失败，请稍后重试"
+        )
     
     # 生成JWT令牌
     access_token = AuthMiddleware.generate_jwt_token(
@@ -188,12 +192,8 @@ def get_current_user_info(request: Request, current_user: dict = Depends(get_cur
     """
     user_username = current_user.get("username", "")
     
-    # 从数据库获取用户完整信息
-    user = None
-    for key, value in USERS_DB.items():
-        if value.get("username") == user_username:
-            user = value
-            break
+    # 从Redis获取用户完整信息
+    user = redis_service.get_user_by_username(user_username)
     
     if not user:
         # 如果找不到用户，返回基本信息
@@ -234,24 +234,29 @@ def update_user_profile(
     """
     user_username = current_user.get("username", "")
     
-    # 从数据库获取用户信息
-    user = None
-    for key, value in USERS_DB.items():
-        if value.get("username") == user_username:
-            user = value
-            break
-    
-    if not user:
+    # 使用Redis更新用户信息
+    try:
+        user = redis_service.update_user(
+            username=user_username,
+            phone=update_data.phone,
+            gender=update_data.gender,
+            birthday=update_data.birthday,
+            bio=update_data.bio,
+            travel_preferences=update_data.travel_preferences,
+            avatar_url=update_data.avatar_url
+        )
+    except ValueError as e:
+        logger.warning(f"更新用户资料失败 - {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="用户不存在"
+            detail=str(e)
         )
-    
-    # 更新用户信息（只更新提供的字段）
-    update_dict = update_data.dict(exclude_unset=True)
-    for key, value in update_dict.items():
-        if value is not None:
-            user[key] = value
+    except RuntimeError as e:
+        logger.error(f"更新用户资料失败 - {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="更新失败，请稍后重试"
+        )
     
     logger.info(f"用户资料更新成功 - UserID: {user['user_id']}")
     
@@ -286,31 +291,27 @@ def change_password(
     """
     user_username = current_user.get("username", "")
     
-    # 从数据库获取用户信息
-    user = None
-    for key, value in USERS_DB.items():
-        if value.get("username") == user_username:
-            user = value
-            break
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="用户不存在"
+    # 使用Redis更新密码
+    try:
+        redis_service.update_password(
+            username=user_username,
+            old_password=password_data.old_password,
+            new_password=password_data.new_password
         )
-    
-    # 验证原密码
-    if user.get("password") != password_data.old_password:
-        logger.warning(f"密码修改失败 - 原密码错误 - UserID: {user['user_id']}")
+    except ValueError as e:
+        logger.warning(f"密码修改失败 - {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="原密码错误"
+            detail=str(e)
+        )
+    except RuntimeError as e:
+        logger.error(f"密码修改失败 - {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="密码修改失败，请稍后重试"
         )
     
-    # 更新密码
-    user["password"] = password_data.new_password
-    
-    logger.info(f"用户密码修改成功 - UserID: {user['user_id']}")
+    logger.info(f"用户密码修改成功 - Username: {user_username}")
     
     return {"message": "密码修改成功"}
 
@@ -337,3 +338,59 @@ def logout(request: Request, current_user: dict = Depends(get_current_user)):
     # 3. 记录退出时间等
     
     return {"message": "退出登录成功"}
+
+@router.post("/upload-avatar")
+async def upload_avatar(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    上传用户头像
+    
+    Args:
+        request: FastAPI请求对象
+        file: 上传的头像文件
+        current_user: 当前认证用户信息
+        
+    Returns:
+        头像URL
+    """
+    # 验证文件类型
+    if not file.content_type or not file.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="只能上传图片文件"
+        )
+    
+    # 生成唯一文件名
+    file_extension = os.path.splitext(file.filename)[1] if file.filename else '.jpg'
+    unique_filename = f"{current_user['user_id']}_{uuid.uuid4().hex[:8]}{file_extension}"
+    file_path = UPLOAD_DIR / unique_filename
+    
+    try:
+        # 保存文件
+        contents = await file.read()
+        # 验证文件大小（2MB限制）
+        if len(contents) > 2 * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="文件大小不能超过2MB"
+            )
+        
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        
+        # 生成文件URL
+        file_url = f"/uploads/avatars/{unique_filename}"
+        
+        logger.info(f"头像上传成功 - UserID: {current_user['user_id']}, URL: {file_url}")
+        
+        return {"url": file_url}
+        
+    except Exception as e:
+        logger.error(f"头像上传失败 - UserID: {current_user['user_id']}, Error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="头像上传失败"
+        )

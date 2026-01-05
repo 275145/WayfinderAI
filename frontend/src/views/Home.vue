@@ -355,7 +355,34 @@ const handleSubmit = async () => {
       // 延迟一点显示完成状态
       setTimeout(() => {
         loadingProgressVisible.value = false
-        ElMessage.success('行程规划成功！')
+        
+        // 保存到localStorage中的历史行程列表
+        try {
+          const savedTrips = JSON.parse(localStorage.getItem('myTrips') || '[]')
+          // 为新行程添加唯一ID和创建时间
+          const newTrip = {
+            ...result,
+            id: Date.now().toString(),
+            created_at: new Date().toISOString()
+          }
+          // 将新行程添加到列表开头
+          savedTrips.unshift(newTrip)
+          // 最多保存100个行程，超出则删除最老的
+          if (savedTrips.length > 100) {
+            savedTrips.pop()
+          }
+          localStorage.setItem('myTrips', JSON.stringify(savedTrips))
+          
+          // 同时保存到sessionStorage（为了兼容Result.vue的原有逻辑）
+          sessionStorage.setItem('currentTripPlan', JSON.stringify(newTrip))
+          
+          ElMessage.success('行程规划成功！已保存到我的行程')
+        } catch (error) {
+          console.error('保存行程失败:', error)
+          // 即使保存失败也让用户继续使用
+          sessionStorage.setItem('currentTripPlan', JSON.stringify(result))
+          ElMessage.success('行程规划成功！')
+        }
         
         // 跳转到结果页面，传递数据
         router.push({

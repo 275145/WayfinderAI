@@ -5,9 +5,14 @@ pydantic-settings
 requests
 openai
 python-dotenv
-# 新增依赖
+# 认证和安全
 pyjwt  # JWT认证
+bcrypt>=4.0.0  # 密码加密（直接使用bcrypt库，避免passlib兼容性问题）
+# Redis持久化
+redis>=4.5.0  # Redis客户端
+# 数据验证
 email-validator  # 邮箱验证
+# 向量和机器学习
 sentence-transformers  # 文本嵌入
 faiss-cpu  # 向量数据库（CPU版本）
 numpy  # 数值计算

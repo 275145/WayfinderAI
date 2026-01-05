@@ -1,53 +1,36 @@
 """
-熔断器实现
-实现Circuit Breaker模式，防止级联故障
+熔断器实现 - 简化版本
+简单的失败计数和快速失败机制
 """
 import time
-from enum import Enum
-from typing import Callable, Any, Optional
+from typing import Callable, Any
 from threading import Lock
 from app.observability.logger import default_logger as logger
 
 
-class CircuitState(Enum):
-    """熔断器状态"""
-    CLOSED = "closed"  # 正常状态，允许请求通过
-    OPEN = "open"  # 熔断状态，拒绝请求
-    HALF_OPEN = "half_open"  # 半开状态，允许少量请求通过以测试服务是否恢复
-
-
 class CircuitBreaker:
     """
-    熔断器实现
-    当失败率超过阈值时，熔断器会打开，拒绝请求
-    一段时间后进入半开状态，允许少量请求测试服务是否恢复
+    简化的熔断器
+    失败达到阈值后熔断，一段时间后自动恢复
     """
     
     def __init__(
         self,
         failure_threshold: int = 5,  # 失败次数阈值
-        success_threshold: int = 2,  # 半开状态下成功次数阈值
-        timeout: float = 60.0,  # 熔断后等待时间（秒）
-        expected_exception: type = Exception  # 期望的异常类型
+        timeout: float = 60.0  # 熔断后等待时间（秒）
     ):
         """
         初始化熔断器
         
         Args:
-            failure_threshold: 失败次数阈值，超过此值将打开熔断器
-            success_threshold: 半开状态下成功次数阈值，达到此值将关闭熔断器
-            timeout: 熔断后等待时间（秒），之后进入半开状态
-            expected_exception: 期望的异常类型
+            failure_threshold: 失败次数阈值
+            timeout: 熔断后等待时间（秒）
         """
         self.failure_threshold = failure_threshold
-        self.success_threshold = success_threshold
         self.timeout = timeout
-        self.expected_exception = expected_exception
-        
         self.failure_count = 0
-        self.success_count = 0
-        self.last_failure_time: Optional[float] = None
-        self.state = CircuitState.CLOSED
+        self.last_failure_time = 0.0
+        self.is_open = False
         self.lock = Lock()
     
     def call(self, func: Callable, *args, **kwargs) -> Any:
@@ -66,107 +49,69 @@ class CircuitBreaker:
             Exception: 当熔断器打开时抛出异常
         """
         with self.lock:
-            # 检查状态
-            if self.state == CircuitState.OPEN:
-                # 检查是否可以进入半开状态
-                if time.time() - (self.last_failure_time or 0) >= self.timeout:
-                    logger.info(f"熔断器从OPEN状态进入HALF_OPEN状态")
-                    self.state = CircuitState.HALF_OPEN
-                    self.success_count = 0
+            # 检查是否应该从熔断状态恢复
+            if self.is_open:
+                if time.time() - self.last_failure_time >= self.timeout:
+                    # 超过等待时间，尝试恢复
+                    self.is_open = False
+                    self.failure_count = 0
+                    logger.info("熔断器已恢复，允许请求通过")
                 else:
                     raise Exception("熔断器已打开，服务暂时不可用")
+        
+        # 执行函数
+        try:
+            result = func(*args, **kwargs)
             
-            # 尝试调用函数
-            try:
-                result = func(*args, **kwargs)
-                self._on_success()
-                return result
-            except self.expected_exception as e:
-                self._on_failure()
-                raise e
-            except Exception as e:
-                # 非预期异常，不记录为失败
-                raise e
-    
-    def _on_success(self):
-        """处理成功调用"""
-        with self.lock:
-            if self.state == CircuitState.HALF_OPEN:
-                self.success_count += 1
-                if self.success_count >= self.success_threshold:
-                    logger.info("熔断器从HALF_OPEN状态进入CLOSED状态，服务已恢复")
-                    self.state = CircuitState.CLOSED
-                    self.failure_count = 0
-                    self.success_count = 0
-            elif self.state == CircuitState.CLOSED:
-                # 重置失败计数
+            # 成功后重置计数
+            with self.lock:
                 self.failure_count = 0
-    
-    def _on_failure(self):
-        """处理失败调用"""
-        with self.lock:
-            self.failure_count += 1
-            self.last_failure_time = time.time()
             
-            if self.state == CircuitState.HALF_OPEN:
-                # 半开状态下失败，重新打开熔断器
-                logger.warning("半开状态下请求失败，熔断器重新打开")
-                self.state = CircuitState.OPEN
-                self.success_count = 0
-            elif self.state == CircuitState.CLOSED:
-                if self.failure_count >= self.failure_threshold:
+            return result
+            
+        except Exception as e:
+            # 失败时计数
+            with self.lock:
+                self.failure_count += 1
+                self.last_failure_time = time.time()
+                
+                # 达到阈值，打开熔断器
+                if self.failure_count >= self.failure_threshold and not self.is_open:
+                    self.is_open = True
                     logger.error(
-                        f"失败次数达到阈值({self.failure_threshold})，熔断器打开",
+                        f"失败次数达到阈值({self.failure_threshold})，熔断器已打开",
                         extra={"failure_count": self.failure_count}
                     )
-                    self.state = CircuitState.OPEN
-    
-    def get_state(self) -> CircuitState:
-        """获取当前状态"""
-        return self.state
+            
+            raise e
     
     def reset(self):
         """重置熔断器"""
         with self.lock:
-            self.state = CircuitState.CLOSED
+            self.is_open = False
             self.failure_count = 0
-            self.success_count = 0
-            self.last_failure_time = None
+            self.last_failure_time = 0.0
+    
+    def get_state(self) -> str:
+        """获取当前状态"""
+        return "open" if self.is_open else "closed"
 
 
 class CircuitBreakerManager:
-    """
-    熔断器管理器
-    管理多个熔断器实例
-    """
+    """熔断器管理器"""
     
     def __init__(self):
         self.breakers: dict[str, CircuitBreaker] = {}
         self.lock = Lock()
     
     def get_breaker(self, name: str, **kwargs) -> CircuitBreaker:
-        """
-        获取或创建熔断器
-        
-        Args:
-            name: 熔断器名称
-            **kwargs: 熔断器配置参数
-        
-        Returns:
-            熔断器实例
-        """
+        """获取或创建熔断器"""
         if name not in self.breakers:
             with self.lock:
                 if name not in self.breakers:
                     self.breakers[name] = CircuitBreaker(**kwargs)
         return self.breakers[name]
-    
-    def reset_breaker(self, name: str):
-        """重置指定熔断器"""
-        if name in self.breakers:
-            self.breakers[name].reset()
 
 
 # 全局熔断器管理器
 circuit_breaker_manager = CircuitBreakerManager()
-

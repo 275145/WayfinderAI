@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from .api.v1 import trip as trip_v1, auth as auth_v1
 from .config import settings
 from .observability.logger import setup_logger, default_logger
@@ -38,8 +40,8 @@ app.add_middleware(AuthMiddleware,
 
 # 3. 限流中间件
 rate_limiter = RateLimiter(
-    global_rate=(100, 1.0),  # 全局：100个请求/秒
-    per_ip_rate=(20, 1.0),  # 每个IP：20个请求/秒
+    global_rate=100,  # 全局：100个请求/秒
+    per_ip_rate=20,   # 每个IP：20个请求/秒
     enabled=True
 )
 app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
@@ -52,6 +54,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 挂载静态文件服务（用于头像等文件）
+uploads_dir = Path("uploads")
+uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 # 包含v1版本的API路由
 app.include_router(trip_v1.router, prefix="/api/v1/trips", tags=["Trip Planning"])
