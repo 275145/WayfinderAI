@@ -81,7 +81,13 @@
 **外部服务**：高德地图 API Key、Unsplash API Key、LLM API Key
 
 ### 安装步骤
+前期工作：
+你需要准备以下 API 密钥：
 
+LLM 的 API(OpenAI、DeepSeek 等)
+高德地图 Web 服务 Key：访问 https://console.amap.com/ 注册并创建应用
+Unsplash Access Key：访问 https://unsplash.com/developers 注册并创建应用
+将所有 API 密钥放入.env文件。
 1. **克隆项目**
 ```bash
 git clone <repository-url>
@@ -112,7 +118,8 @@ python run.py
 ```bash
 cd ../frontend
 npm install
-# 创建 .env.local 文件，配置后端地址和高德地图 Key
+# 创建 .env文件，配置后端地址和高德地图 Key
+cp .env.example .env
 npm run dev
 ```
 前端服务将在 http://localhost:5173 启动

@@ -23,5 +23,5 @@ lerna-debug.log*
 *.sw?
 
 # 环境变量
-.env.local
+.env
 .env.*.local
