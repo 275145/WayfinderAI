@@ -527,14 +527,32 @@ class RedisService:
             trip_key = self._generate_trip_key(trip_id)
             user_trips_list_key = self._generate_user_trips_list_key(user_id)
             
-            # 删除行程数据
-            self.redis.delete(trip_key)
+            # 验证行程是否存在
+            if not self.redis.exists(trip_key):
+                logger.warning(f"行程不存在 - TripID: {trip_id}")
+                return False
             
-            # 从用户行程列表中移除
-            self.redis.zrem(user_trips_list_key, trip_id)
+            # 验证行程是否属于当前用户
+            is_member = self.redis.zscore(user_trips_list_key, trip_id)
+            if is_member is None:
+                logger.warning(f"行程不属于当前用户 - UserID: {user_id}, TripID: {trip_id}")
+                return False
             
-            logger.info(f"行程删除成功 - UserID: {user_id}, TripID: {trip_id}")
-            return True
+            # 使用Redis管道确保原子性操作
+            pipe = self.redis.pipeline()
+            try:
+                # 删除行程数据
+                pipe.delete(trip_key)
+                # 从用户行程列表中移除
+                pipe.zrem(user_trips_list_key, trip_id)
+                # 执行管道中的所有命令
+                pipe.execute()
+                
+                logger.info(f"行程删除成功 - UserID: {user_id}, TripID: {trip_id}")
+                return True
+            except Exception as e:
+                logger.error(f"Redis管道执行失败: {str(e)}")
+                return False
         except Exception as e:
             logger.error(f"行程删除失败: {str(e)}")
             return False

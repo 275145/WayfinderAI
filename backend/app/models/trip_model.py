@@ -72,6 +72,8 @@ class DailyPlan(BaseModel):
 class TripPlanResponse(BaseModel):
     """行程规划的API响应体"""
 
+    id: Optional[str] = Field(None, description="行程ID")
+    created_at: Optional[str] = Field(None, description="创建时间")
     trip_title: str = Field(..., description="行程标题")
     total_budget: BudgetBreakdown = Field(
         ..., description="整体预算（包含交通、餐饮、酒店、景点门票费用拆分）"
