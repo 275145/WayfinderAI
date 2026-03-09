@@ -44,11 +44,15 @@
                 placeholder="请输入您想去的城市，例如：北京"
                 clearable
                 size="large"
+                @blur="checkCitySupport"
               >
                 <template #prefix>
                   <el-icon><Location /></el-icon>
                 </template>
               </el-input>
+              <div v-if="citySupport" class="city-support-hint" :class="`level-${citySupport.level}`">
+                <strong>城市支持：{{ citySupport.level }}</strong> - {{ citySupport.message }}
+              </div>
             </el-form-item>
           </el-col>
 
@@ -190,6 +194,10 @@
     <LoadingProgress 
       ref="loadingProgressRef"
       v-model:visible="loadingProgressVisible"
+      :task-progress="taskProgress"
+      :task-title="taskTitle"
+      :task-description="taskDescription"
+      :task-step="taskStep"
       @cancel="handleCancelRequest"
     />
   </div>
@@ -198,10 +206,9 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Location, Search, InfoFilled } from '@element-plus/icons-vue'
-import axios from 'axios'
-import { tripApi } from '@/services/api'
+import { ElMessage } from 'element-plus'
+import { Location, Search } from '@element-plus/icons-vue'
+import { tripApi, authApi } from '@/services/api'
 import LoadingProgress from '@/components/LoadingProgress.vue'
 import type { TripFormData, TripPlanRequest } from '@/types'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -213,7 +220,13 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 const loadingProgressVisible = ref(false)
 const loadingProgressRef = ref<InstanceType<typeof LoadingProgress>>()
-const cancelTokenSource = ref<{ cancel: (message?: string) => void } | null>(null)
+const taskPollingTimer = ref<number | null>(null)
+const taskProgress = ref<number | undefined>(undefined)
+const taskTitle = ref<string | undefined>(undefined)
+const taskDescription = ref<string | undefined>(undefined)
+const taskStep = ref<number | undefined>(undefined)
+const currentTaskId = ref<string | null>(null)
+const citySupport = ref<{ city: string; level: string; message: string } | null>(null)
 
 // 表单数据
 const formData = reactive<TripFormData>({
@@ -297,6 +310,34 @@ const fillExample = (example: any) => {
   ]
   
   ElMessage.success('已填充示例数据，您可以直接开始规划！')
+  checkCitySupport()
+}
+
+const mapTaskToStep = (progress: number) => {
+  if (progress < 25) return 0
+  if (progress < 50) return 1
+  if (progress < 80) return 2
+  return 3
+}
+
+const checkCitySupport = async () => {
+  const city = formData.destination?.trim()
+  if (!city) {
+    citySupport.value = null
+    return
+  }
+  try {
+    citySupport.value = await tripApi.getCitySupport(city)
+  } catch {
+    citySupport.value = null
+  }
+}
+
+const stopTaskPolling = () => {
+  if (taskPollingTimer.value) {
+    clearInterval(taskPollingTimer.value)
+    taskPollingTimer.value = null
+  }
 }
 
 // 提交表单
@@ -305,35 +346,22 @@ const handleSubmit = async () => {
   
   await formRef.value.validate(async (valid) => {
     if (!valid) return
-    
-    // 检查用户是否已登录
+
     if (!authStore.isAuthenticated) {
       try {
-        await ElMessageBox.confirm(
-          '您需要登录后才能使用行程规划功能，是否前往登录？',
-          '未登录提示',
-          {
-            confirmButtonText: '前往登录',
-            cancelButtonText: '取消',
-            type: 'warning'
-          }
-        )
-        // 用户确认，跳转到登录页面
-        router.push('/login')
+        await authApi.createGuestSession()
+        ElMessage.info('当前以访客模式规划行程：可保存和查看历史，跨设备/清理Cookie后可能丢失')
       } catch {
-        // 用户取消
-        ElMessage.info('请先登录后再使用行程规划功能')
+        ElMessage.warning('访客会话初始化失败，将继续尝试请求')
       }
-      return
     }
     
     loading.value = true
     loadingProgressVisible.value = true
-    
-    // 创建取消令牌
-    const CancelToken = axios.CancelToken
-    const source = CancelToken.source()
-    cancelTokenSource.value = source
+    taskProgress.value = 0
+    taskTitle.value = '任务创建中...'
+    taskDescription.value = '系统正在初始化行程生成任务'
+    taskStep.value = 0
     
     try {
       // 构建请求数据
@@ -346,72 +374,107 @@ const handleSubmit = async () => {
         budget: formData.budget
       }
       
-      // 调用API，传入取消令牌
-      const result = await tripApi.createTripPlan(request, source.token)
-      
-      // 完成进度条
-      loadingProgressRef.value?.completeProgress()
-      
-      // 延迟一点显示完成状态
-      setTimeout(() => {
-        loadingProgressVisible.value = false
-        
-        // 保存到localStorage中的历史行程列表
-        try {
-          const savedTrips = JSON.parse(localStorage.getItem('myTrips') || '[]')
-          // 为新行程添加唯一ID和创建时间
-          const newTrip = {
-            ...result,
-            id: Date.now().toString(),
-            created_at: new Date().toISOString()
-          }
-          // 将新行程添加到列表开头
-          savedTrips.unshift(newTrip)
-          // 最多保存100个行程，超出则删除最老的
-          if (savedTrips.length > 100) {
-            savedTrips.pop()
-          }
-          localStorage.setItem('myTrips', JSON.stringify(savedTrips))
-          
-          // 同时保存到sessionStorage（为了兼容Result.vue的原有逻辑）
-          sessionStorage.setItem('currentTripPlan', JSON.stringify(newTrip))
-          
-          ElMessage.success('行程规划成功！已保存到我的行程')
-        } catch (error) {
-          console.error('保存行程失败:', error)
-          // 即使保存失败也让用户继续使用
-          sessionStorage.setItem('currentTripPlan', JSON.stringify(result))
-          ElMessage.success('行程规划成功！')
+      // 改为异步任务模式
+      const task = await tripApi.createTripPlanTask(request)
+      currentTaskId.value = task.task_id
+      taskTitle.value = '任务已创建'
+      taskDescription.value = task.message
+
+      const maxPollMs = 5 * 60 * 1000
+      const startedAt = Date.now()
+
+      // 立即拉一次
+      const pollOnce = async () => {
+        if (!currentTaskId.value) return
+        const status = await tripApi.getTripTask(currentTaskId.value)
+        taskProgress.value = status.progress
+        taskTitle.value = status.status === 'failed' ? '任务失败' : '行程生成中...'
+        taskDescription.value = status.message || '系统正在生成行程'
+        taskStep.value = mapTaskToStep(status.progress)
+
+        if (status.status === 'succeeded' && status.result_trip_id) {
+          stopTaskPolling()
+          const result = await tripApi.getTripDetail(status.result_trip_id)
+          loadingProgressRef.value?.completeProgress()
+          setTimeout(() => {
+            loading.value = false
+            loadingProgressVisible.value = false
+            currentTaskId.value = null
+            try {
+              const savedTrips = JSON.parse(localStorage.getItem('myTrips') || '[]')
+              const newTrip = {
+                ...result,
+                id: result.id || Date.now().toString(),
+                created_at: result.created_at || new Date().toISOString()
+              }
+              savedTrips.unshift(newTrip)
+              if (savedTrips.length > 100) {
+                savedTrips.pop()
+              }
+              localStorage.setItem('myTrips', JSON.stringify(savedTrips))
+              sessionStorage.setItem('currentTripPlan', JSON.stringify(newTrip))
+            } catch (error) {
+              console.error('保存行程失败:', error)
+              sessionStorage.setItem('currentTripPlan', JSON.stringify(result))
+            }
+            ElMessage.success('行程规划成功！')
+            router.push({
+              name: 'Result',
+              state: { tripPlan: result }
+            })
+          }, 400)
+          return
         }
-        
-        // 跳转到结果页面，传递数据
-        router.push({
-          name: 'Result',
-          state: { tripPlan: result }
-        })
-      }, 800)
-    } catch (error: any) {
-      // 如果是取消请求，不显示错误消息
-      if (axios.isCancel(error)) {
-        return
+
+        if (status.status === 'failed') {
+          stopTaskPolling()
+          loading.value = false
+          loadingProgressVisible.value = false
+          currentTaskId.value = null
+          throw new Error(status.error || status.message || '任务执行失败')
+        }
+
+        if (Date.now() - startedAt > maxPollMs) {
+          stopTaskPolling()
+          loading.value = false
+          loadingProgressVisible.value = false
+          currentTaskId.value = null
+          throw new Error('任务超时，请稍后重试')
+        }
       }
+
+      await pollOnce()
+      taskPollingTimer.value = window.setInterval(() => {
+        pollOnce().catch((err) => {
+          stopTaskPolling()
+          loading.value = false
+          loadingProgressVisible.value = false
+          currentTaskId.value = null
+          ElMessage.error(err.message || '规划失败，请重试')
+        })
+      }, 1500)
+    } catch (error: any) {
       loadingProgressVisible.value = false
       ElMessage.error(error.message || '规划失败，请重试')
       console.error('规划失败:', error)
     } finally {
-      loading.value = false
-      cancelTokenSource.value = null
+      // 这里不能立即置false，交给任务结束逻辑处理
+      if (!currentTaskId.value) {
+        loading.value = false
+      }
     }
   })
 }
 
 // 处理取消请求
 const handleCancelRequest = () => {
-  if (cancelTokenSource.value) {
-    cancelTokenSource.value.cancel('用户取消了请求')
-    cancelTokenSource.value = null
-  }
+  stopTaskPolling()
+  currentTaskId.value = null
   loading.value = false
+  taskProgress.value = undefined
+  taskTitle.value = undefined
+  taskDescription.value = undefined
+  taskStep.value = undefined
   // 表单数据会自动保留（因为是reactive的）
   ElMessage.info('已取消请求，您的表单信息已保留')
 }
@@ -596,6 +659,33 @@ const handleCancelRequest = () => {
 
       &:active {
         transform: translateY(0);
+      }
+    }
+
+    .city-support-hint {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+      border: 1px solid transparent;
+
+      &.level-supported {
+        background: #ecfdf3;
+        border-color: #86efac;
+        color: #166534;
+      }
+
+      &.level-beta {
+        background: #fff7ed;
+        border-color: #fdba74;
+        color: #9a3412;
+      }
+
+      &.level-unsupported {
+        background: #fef2f2;
+        border-color: #fca5a5;
+        color: #991b1b;
       }
     }
   }

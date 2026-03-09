@@ -27,6 +27,9 @@
                     <el-icon><Wallet /></el-icon>
                     预算估算：¥{{ tripPlan.total_budget.total }}
                   </span>
+                  <span class="meta-item" v-if="tripPlan.version != null">
+                    版本：v{{ tripPlan.version }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -42,6 +45,14 @@
       </div>
 
       <!-- 主要内容区 -->
+      <el-alert
+        v-if="tripPlan.city_support_message"
+        :title="tripPlan.city_support_message"
+        :type="tripPlan.city_support_level === 'supported' ? 'success' : (tripPlan.city_support_level === 'beta' ? 'warning' : 'error')"
+        :closable="false"
+        class="city-support-alert"
+      />
+
       <el-row :gutter="24" class="main-content">
         <!-- 左侧：地图和行程 -->
         <el-col :xl="16" :lg="16" :md="24" :sm="24" :xs="24">
@@ -504,6 +515,10 @@ const goEdit = () => {
     margin: 0 auto;
     padding: 20px;
     z-index: 1;
+  }
+
+  .city-support-alert {
+    margin-bottom: 16px;
   }
 
   // 头部区域

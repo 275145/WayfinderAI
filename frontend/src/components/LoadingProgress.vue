@@ -63,6 +63,10 @@ import { InfoFilled, Close } from '@element-plus/icons-vue'
 
 interface Props {
   visible: boolean
+  taskProgress?: number
+  taskTitle?: string
+  taskDescription?: string
+  taskStep?: number
 }
 
 interface LoadingStatus {
@@ -128,6 +132,13 @@ const tips = [
 
 // 当前状态
 const currentStatus = computed(() => {
+  if (props.taskTitle || props.taskDescription) {
+    return {
+      title: props.taskTitle || '任务执行中...',
+      description: props.taskDescription || '系统正在处理您的请求',
+      step: props.taskStep ?? activeStep.value
+    }
+  }
   const index = Math.min(
     Math.floor((progress.value / 100) * statusList.length),
     statusList.length - 1
@@ -203,9 +214,25 @@ const completeProgress = () => {
 // 监听可见性变化
 watch(() => props.visible, (newVal) => {
   if (newVal) {
-    startProgress()
+    if (props.taskProgress == null) {
+      startProgress()
+    } else {
+      progress.value = props.taskProgress
+      activeStep.value = props.taskStep ?? 0
+    }
   } else {
     stopProgress()
+  }
+})
+
+watch(() => props.taskProgress, (val) => {
+  if (val != null) {
+    progress.value = Math.max(0, Math.min(100, Number(val)))
+    if (props.taskStep != null) {
+      activeStep.value = props.taskStep
+    } else {
+      activeStep.value = Math.min(Math.floor((progress.value / 100) * (steps.length - 1)), steps.length - 1)
+    }
   }
 })
 

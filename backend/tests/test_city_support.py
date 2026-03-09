@@ -4,9 +4,14 @@
 """
 import sys
 import requests
+from datetime import date, timedelta
 
 # API基础URL
 BASE_URL = "http://localhost:8000"
+
+
+def future_date(days_from_today: int) -> str:
+    return (date.today() + timedelta(days=days_from_today)).isoformat()
 
 def test_supported_cities():
     """测试支持的城市"""
@@ -21,8 +26,8 @@ def test_supported_cities():
         
         trip_request = {
             "destination": city,
-            "start_date": "2024-10-01",
-            "end_date": "2024-10-03",
+            "start_date": future_date(7),
+            "end_date": future_date(9),
             "preferences": ["历史", "文化"],
             "hotel_preferences": ["经济型"],
             "budget": "中等"
@@ -46,6 +51,36 @@ def test_supported_cities():
     
     return True
 
+
+def test_city_support_endpoint():
+    """测试城市支持分级接口"""
+    print("\n" + "=" * 80)
+    print("测试0: 城市支持分级接口")
+    print("=" * 80)
+    cases = [
+        ("北京", "supported"),
+        ("石家庄", "beta"),
+        ("未知城市123", "unsupported")
+    ]
+    ok = True
+    for city, expected in cases:
+        try:
+            resp = requests.get(f"{BASE_URL}/api/v1/trips/city-support/{city}", timeout=10)
+            if resp.status_code != 200:
+                print(f"   ❌ {city}: 接口失败 {resp.status_code}")
+                ok = False
+                continue
+            level = resp.json().get("level")
+            if level == expected:
+                print(f"   ✅ {city}: level={level}")
+            else:
+                print(f"   ❌ {city}: level={level}, expected={expected}")
+                ok = False
+        except Exception as e:
+            print(f"   ❌ {city}: {e}")
+            ok = False
+    return ok
+
 def test_unsupported_cities():
     """测试不支持的城市（应该给出警告但仍处理）"""
     print("\n" + "=" * 80)
@@ -63,8 +98,8 @@ def test_unsupported_cities():
         
         trip_request = {
             "destination": city,
-            "start_date": "2024-10-01",
-            "end_date": "2024-10-03",
+            "start_date": future_date(7),
+            "end_date": future_date(9),
             "preferences": ["历史"],
             "hotel_preferences": ["经济型"],
             "budget": "中等"
@@ -104,8 +139,8 @@ def test_edge_cases():
     print(f"\n📍 测试: 空城市")
     trip_request = {
         "destination": "",
-        "start_date": "2024-10-01",
-        "end_date": "2024-10-03",
+        "start_date": future_date(7),
+        "end_date": future_date(9),
         "preferences": ["历史"],
         "hotel_preferences": ["经济型"],
         "budget": "中等"
@@ -124,8 +159,8 @@ def test_edge_cases():
     print(f"\n📍 测试: 特殊字符城市")
     trip_request = {
         "destination": "北京@#$%",
-        "start_date": "2024-10-01",
-        "end_date": "2024-10-03",
+        "start_date": future_date(7),
+        "end_date": future_date(9),
         "preferences": ["历史"],
         "hotel_preferences": ["经济型"],
         "budget": "中等"
@@ -150,13 +185,14 @@ def display_supported_cities():
     print("当前系统支持的30个热门旅游城市:")
     print("=" * 80)
     
-    from app.agents.planner import CITY_BOUNDS
-    
-    cities = list(CITY_BOUNDS.keys())
+    from app.services.city_service import city_support_service
+    cities_meta = city_support_service.list_cities()
+    cities = list(cities_meta.keys())
     print(f"\n总计: {len(cities)} 个城市\n")
-    
+
     for i, city in enumerate(cities, 1):
-        print(f"{i:2d}. {city}")
+        level = cities_meta[city].get("level", "unknown")
+        print(f"{i:2d}. {city} ({level})")
     
     return True
 
@@ -183,6 +219,7 @@ if __name__ == "__main__":
     display_supported_cities()
     
     # 运行测试
+    success0 = test_city_support_endpoint()
     success1 = test_supported_cities()
     success2 = test_unsupported_cities()
     success3 = test_edge_cases()
@@ -191,11 +228,12 @@ if __name__ == "__main__":
     print("\n" + "=" * 80)
     print("📊 测试总结")
     print("=" * 80)
+    print(f"城市分级接口测试: {'✅ 通过' if success0 else '❌ 失败'}")
     print(f"支持城市测试: {'✅ 通过' if success1 else '❌ 失败'}")
     print(f"不支持城市测试: {'✅ 通过' if success2 else '❌ 失败'}")
     print(f"边界情况测试: {'✅ 通过' if success3 else '❌ 失败'}")
     
-    if success1 and success2 and success3:
+    if success0 and success1 and success2 and success3:
         print("\n🎉 所有测试通过！")
         sys.exit(0)
     else:

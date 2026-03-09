@@ -14,6 +14,7 @@ import type {
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
   timeout: 300000, // 5分钟超时，为复杂的行程规划留足时间
+  withCredentials: true, // 允许guest_id cookie跨域发送
   headers: {
     'Content-Type': 'application/json'
   }
@@ -26,6 +27,11 @@ apiClient.interceptors.request.use(
     const token = localStorage.getItem('access_token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
+    } else {
+      const guestSessionId = localStorage.getItem('guest_session_id')
+      if (guestSessionId) {
+        config.headers['X-Guest-Session'] = guestSessionId
+      }
     }
     return config
   },
@@ -155,8 +161,12 @@ export const authApi = {
   /**
    * 创建访客会话
    */
-  async createGuestSession(): Promise<{ user_id: string; message: string }> {
-    return apiClient.post('/api/v1/auth/guest')
+  async createGuestSession(): Promise<{ user_id: string; guest_session_id?: string; user_type: 'guest' | 'registered'; message: string }> {
+    const resp = await apiClient.post('/api/v1/auth/guest')
+    if (resp?.user_type === 'guest' && resp?.guest_session_id) {
+      localStorage.setItem('guest_session_id', resp.guest_session_id)
+    }
+    return resp
   }
 }
 
@@ -174,6 +184,30 @@ export const tripApi = {
     return apiClient.post('/api/v1/trips/plan', request, {
       cancelToken
     })
+  },
+
+  /**
+   * 创建异步行程任务
+   */
+  async createTripPlanTask(request: TripPlanRequest): Promise<{ task_id: string; status: string; message: string }> {
+    return apiClient.post('/api/v1/trips/plan-async', request)
+  },
+
+  /**
+   * 查询任务状态
+   */
+  async getTripTask(taskId: string): Promise<{
+    task_id: string
+    status: 'pending' | 'running' | 'succeeded' | 'failed'
+    progress: number
+    message: string
+    result_trip_id?: string | null
+    error?: string | null
+    city_support_level?: string | null
+    city_support_message?: string | null
+    updated_at?: string
+  }> {
+    return apiClient.get(`/api/v1/trips/tasks/${taskId}`)
   },
 
   /**
@@ -197,6 +231,51 @@ export const tripApi = {
    */
   async deleteTrip(tripId: string): Promise<{ message: string }> {
     return apiClient.delete(`/api/v1/trips/${tripId}`)
+  },
+
+  /**
+   * 更新指定行程
+   * @param tripId 行程ID
+   * @param tripData 更新后的行程数据
+   */
+  async updateTrip(tripId: string, tripData: TripPlanResponse): Promise<TripPlanResponse> {
+    return apiClient.put(`/api/v1/trips/${tripId}`, tripData)
+  },
+
+  /**
+   * 带乐观锁版本保护的更新
+   */
+  async updateTripWithVersion(
+    tripId: string,
+    tripData: TripPlanResponse,
+    expectedVersion?: number
+  ): Promise<TripPlanResponse> {
+    return apiClient.put(`/api/v1/trips/${tripId}`, tripData, {
+      headers: expectedVersion != null ? { 'If-Match-Version': String(expectedVersion) } : {}
+    })
+  },
+
+  /**
+   * 获取行程版本历史
+   */
+  async getTripVersions(tripId: string): Promise<{ trip_id: string; versions: Array<{ version: number; snapshot_at: string; trip_title: string }> }> {
+    return apiClient.get(`/api/v1/trips/${tripId}/versions`)
+  },
+
+  /**
+   * 回滚行程到指定版本
+   */
+  async rollbackTrip(tripId: string, targetVersion: number): Promise<TripPlanResponse> {
+    return apiClient.post(`/api/v1/trips/${tripId}/rollback`, null, {
+      params: { target_version: targetVersion }
+    })
+  },
+
+  /**
+   * 城市支持等级查询
+   */
+  async getCitySupport(city: string): Promise<{ city: string; level: string; message: string }> {
+    return apiClient.get(`/api/v1/trips/city-support/${encodeURIComponent(city)}`)
   },
 
   /**

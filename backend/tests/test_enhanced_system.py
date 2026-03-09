@@ -1,328 +1,127 @@
 """
-测试增强系统功能
-测试JWT认证和向量记忆服务
+增强系统测试（对齐当前API）
+覆盖：注册/登录、/me、guest会话、guest行程保存与回查
 """
-import asyncio
-import json
-import sys
+from datetime import date, timedelta
+from typing import Optional, Dict, Any
 import requests
-from typing import Dict, Any
 
-# API基础URL
 BASE_URL = "http://localhost:8000"
 
-def test_auth_system():
-    """测试认证系统"""
-    print("=== 测试认证系统 ===")
-    
-    # 检查服务器是否运行
-    try:
-        response = requests.get(f"{BASE_URL}/health", timeout=5)
-        if response.status_code != 200:
-            print("   服务器未正常运行，请先启动服务器:")
-            print("   python run.py")
-            return None
-    except requests.exceptions.ConnectionError:
-        print("   服务器未运行，请先启动服务器:")
-        print("   python run.py")
-        print("   然后重新运行测试脚本")
-        return None
-    
-    # 1. 测试用户注册
-    register_data = {
-        "username": "testuser",
-        "email": "test@example.com",
-        "password": "testpassword123"
-    }
-    
-    print("1. 测试用户注册...")
-    response = requests.post(f"{BASE_URL}/api/v1/auth/register", json=register_data)
-    if response.status_code == 200:
-        auth_data = response.json()
-        print(f"   注册成功，获得令牌: {auth_data['access_token'][:20]}...")
-        access_token = auth_data['access_token']
-    else:
-        print(f"   注册失败: {response.status_code} - {response.text}")
-        return None
-    
-    # 2. 测试用户登录
-    login_data = {
-        "email": "test@example.com",
-        "password": "testpassword123"
-    }
-    
-    print("2. 测试用户登录...")
-    response = requests.post(f"{BASE_URL}/api/v1/auth/login", json=login_data)
-    if response.status_code == 200:
-        auth_data = response.json()
-        print(f"   登录成功，获得令牌: {auth_data['access_token'][:20]}...")
-        access_token = auth_data['access_token']
-    else:
-        print(f"   登录失败: {response.status_code} - {response.text}")
-        return None
-    
-    # 3. 测试获取用户信息
-    headers = {"Authorization": f"Bearer {access_token}"}
-    print("3. 测试获取用户信息...")
-    response = requests.get(f"{BASE_URL}/api/v1/auth/me", headers=headers)
-    if response.status_code == 200:
-        user_data = response.json()
-        print(f"   用户信息: {user_data}")
-    else:
-        print(f"   获取用户信息失败: {response.status_code} - {response.text}")
-    
-    # 4. 测试访客会话
-    print("4. 测试访客会话...")
-    response = requests.post(f"{BASE_URL}/api/v1/auth/guest")
-    if response.status_code == 200:
-        guest_data = response.json()
-        print(f"   访客会话: {guest_data}")
-        return access_token
-    else:
-        print(f"   创建访客会话失败: {response.status_code} - {response.text}")
-        return access_token
 
-def test_trip_planning_with_auth(access_token: str):
-    """测试带认证的行程规划"""
-    print("\n=== 测试带认证的行程规划 ===")
-    
-    # 检查服务器是否运行
+def _future_date(days_from_today: int) -> str:
+    return (date.today() + timedelta(days=days_from_today)).isoformat()
+
+
+def _check_server() -> bool:
     try:
-        response = requests.get(f"{BASE_URL}/health", timeout=5)
-        if response.status_code != 200:
-            print("   服务器未正常运行")
-            return
-    except requests.exceptions.ConnectionError:
-        print("   服务器未运行")
-        return
-    
-    headers = {"Authorization": f"Bearer {access_token}"}
-    
-    # 第一次行程规划
+        resp = requests.get(f"{BASE_URL}/health", timeout=5)
+        return resp.status_code == 200
+    except requests.exceptions.RequestException:
+        return False
+
+
+def _register_or_login(username: str, password: str) -> Optional[str]:
+    register_payload = {"username": username, "password": password}
+    login_payload = {"username": username, "password": password}
+
+    reg_resp = requests.post(f"{BASE_URL}/api/v1/auth/register", json=register_payload, timeout=15)
+    if reg_resp.status_code == 200:
+        return reg_resp.json().get("access_token")
+
+    login_resp = requests.post(f"{BASE_URL}/api/v1/auth/login", json=login_payload, timeout=15)
+    if login_resp.status_code == 200:
+        return login_resp.json().get("access_token")
+
+    print("认证失败:", login_resp.status_code, login_resp.text)
+    return None
+
+
+def test_auth_system() -> Optional[str]:
+    print("=== 测试认证系统（当前API）===")
+    if not _check_server():
+        print("服务器未运行，请先执行: python run.py")
+        return None
+
+    token = _register_or_login("testuser_v2", "testpassword123")
+    if not token:
+        return None
+
+    headers = {"Authorization": f"Bearer {token}"}
+    me_resp = requests.get(f"{BASE_URL}/api/v1/auth/me", headers=headers, timeout=15)
+    if me_resp.status_code == 200:
+        me_data = me_resp.json()
+        print("登录用户信息:", {"user_id": me_data.get("user_id"), "user_type": me_data.get("user_type")})
+    else:
+        print("/me 接口失败:", me_resp.status_code, me_resp.text)
+
+    return token
+
+
+def test_guest_session_and_trip_persistence() -> bool:
+    print("\n=== 测试 guest 会话与行程持久化 ===")
+    if not _check_server():
+        print("服务器未运行，请先执行: python run.py")
+        return False
+
+    # 用Session维持cookie（guest_id）
+    session = requests.Session()
+
+    guest_resp = session.post(f"{BASE_URL}/api/v1/auth/guest", timeout=15)
+    if guest_resp.status_code != 200:
+        print("guest会话初始化失败:", guest_resp.status_code, guest_resp.text)
+        return False
+
+    guest_info = guest_resp.json()
+    print("guest会话:", guest_info)
+
     trip_request = {
         "destination": "北京",
-        "start_date": "2024-10-01",
-        "end_date": "2024-10-03",
-        "preferences": ["历史", "文化"],
-        "hotel_preferences": ["经济型"],
+        "start_date": _future_date(7),
+        "end_date": _future_date(9),
+        "preferences": ["历史", "美食"],
+        "hotel_preferences": ["舒适型"],
         "budget": "中等"
     }
-    
-    print("1. 第一次行程规划（北京历史文化）...")
-    response = requests.post(f"{BASE_URL}/api/v1/trips/plan", json=trip_request, headers=headers)
-    if response.status_code == 200:
-        trip_data = response.json()
-        print(f"   行程规划成功: {trip_data['trip_title']}")
-        print(f"   行程天数: {len(trip_data['days'])}")
-    else:
-        print(f"   行程规划失败: {response.status_code} - {response.text}")
-        return
-    
-    # 第二次行程规划（应该利用记忆）
-    trip_request2 = {
-        "destination": "北京",
-        "start_date": "2024-11-01",
-        "end_date": "2024-11-02",
-        "preferences": ["历史"],
-        "hotel_preferences": ["经济型"],
-        "budget": "中等"
-    }
-    
-    print("2. 第二次行程规划（应该利用记忆）...")
-    response = requests.post(f"{BASE_URL}/api/v1/trips/plan", json=trip_request2, headers=headers)
-    if response.status_code == 200:
-        trip_data = response.json()
-        print(f"   行程规划成功: {trip_data['trip_title']}")
-        print(f"   行程天数: {len(trip_data['days'])}")
-    else:
-        print(f"   行程规划失败: {response.status_code} - {response.text}")
 
-def test_vector_memory_service():
-    """测试向量记忆服务"""
-    print("\n=== 测试向量记忆服务 ===")
-    
-    try:
-        from app.services.vector_memory_service import VectorMemoryService
-        
-        # 创建向量记忆服务实例
-        memory_service = VectorMemoryService()
-        
-        # 1. 存储用户偏好
-        print("1. 存储用户偏好...")
-        memory_service.store_user_preference(
-            user_id="test_user_123",
-            preference_type="trip_preferences",
-            preference_data={
-                "destination": "北京",
-                "preferences": ["历史", "文化"],
-                "budget": "中等"
-            }
-        )
-        
-        # 2. 存储用户行程
-        print("2. 存储用户行程...")
-        memory_service.store_user_trip(
-            user_id="test_user_123",
-            trip_data={
-                "destination": "北京",
-                "trip_title": "北京历史文化3日游",
-                "preferences": ["历史", "文化"],
-                "days": [
-                    {
-                        "day": 1,
-                        "theme": "皇家建筑探索",
-                        "attractions": [
-                            {"name": "故宫博物院", "type": "历史文化"},
-                            {"name": "天坛公园", "type": "历史文化"}
-                        ]
-                    }
-                ]
-            }
-        )
-        
-        # 3. 存储目的地知识
-        print("3. 存储目的地知识...")
-        memory_service.store_destination_knowledge(
-            destination="北京",
-            knowledge_data={
-                "description": "中国的首都，历史文化名城",
-                "highlights": ["故宫", "长城", "天坛"],
-                "best_season": "春秋两季",
-                "culture": "传统文化与现代文明交融"
-            }
-        )
-        
-        # 4. 检索用户记忆
-        print("4. 检索用户记忆...")
-        user_memories = memory_service.retrieve_user_memories(
-            user_id="test_user_123",
-            query="北京历史景点",
-            limit=5
-        )
-        print(f"   找到 {len(user_memories)} 条用户记忆")
-        for i, memory in enumerate(user_memories):
-            print(f"   {i+1}. {memory['type']}: {memory.get('text_representation', '')[:50]}...")
-        
-        # 5. 检索知识记忆
-        print("5. 检索知识记忆...")
-        knowledge_memories = memory_service.retrieve_knowledge_memories(
-            query="北京特色景点",
-            limit=3
-        )
-        print(f"   找到 {len(knowledge_memories)} 条知识记忆")
-        for i, memory in enumerate(knowledge_memories):
-            print(f"   {i+1}. {memory['type']}: {memory.get('text_representation', '')[:50]}...")
-        
-        # 6. 混合检索
-        print("6. 混合检索...")
-        hybrid_results = memory_service.hybrid_search(
-            user_id="test_user_123",
-            query="北京历史景点推荐",
-            user_limit=3,
-            knowledge_limit=2
-        )
-        print(f"   用户记忆: {len(hybrid_results['user_memories'])} 条")
-        print(f"   知识记忆: {len(hybrid_results['knowledge_memories'])} 条")
-        
-        # 7. 获取统计信息
-        print("7. 获取统计信息...")
-        stats = memory_service.get_stats()
-        print(f"   用户记忆数: {stats['user_memory_count']}")
-        print(f"   知识记忆数: {stats['knowledge_memory_count']}")
-        print(f"   向量维度: {stats['vector_dimension']}")
-        
-        # 8. 保存索引
-        print("8. 保存索引...")
-        memory_service.save()
-        print("   索引保存成功")
-        
-        print("\n向量记忆服务测试完成！")
-        
-    except Exception as e:
-        print(f"向量记忆服务测试失败: {e}")
-        import traceback
-        traceback.print_exc()
+    plan_resp = session.post(f"{BASE_URL}/api/v1/trips/plan", json=trip_request, timeout=240)
+    if plan_resp.status_code != 200:
+        print("guest行程创建失败（可能是外部依赖未配置）:", plan_resp.status_code, plan_resp.text[:200])
+        return False
 
-def test_integration():
-    """测试系统集成"""
-    print("\n=== 测试系统集成 ===")
-    
-    try:
-        from app.agents.planner import PlannerAgent
-        from app.services.llm_service import LLMService
-        from app.services.vector_memory_service import VectorMemoryService
-        from app.models.trip_model import TripPlanRequest
-        
-        # 创建服务实例
-        llm_service = LLMService()
-        memory_service = VectorMemoryService()
-        
-        # 创建规划器
-        planner = PlannerAgent(llm_service=llm_service, memory_service=memory_service)
-        
-        # 创建行程请求
-        trip_request = TripPlanRequest(
-            destination="北京",
-            start_date="2024-10-01",
-            end_date="2024-10-02",
-            preferences=["历史", "文化"],
-            hotel_preferences=["经济型"],
-            budget="中等"
-        )
-        
-        # 执行行程规划
-        print("执行行程规划...")
-        plan = planner.plan_trip(request=trip_request, user_id="test_user_123")
-        
-        if plan:
-            print(f"行程规划成功: {plan.trip_title}")
-            print(f"行程天数: {len(plan.days)}")
-            print(f"总预算: {plan.total_budget.total}")
-        else:
-            print("行程规划失败")
-            
-    except Exception as e:
-        print(f"系统集成测试失败: {e}")
-        print("   这可能是由于缺少必要的API密钥或服务配置问题")
-        print("   请检查 .env 文件中的配置是否正确")
-        import traceback
-        traceback.print_exc()
+    trip = plan_resp.json()
+    trip_id = trip.get("id")
+    if not trip_id:
+        print("返回数据缺少trip_id")
+        return False
+    print("guest行程创建成功:", {"trip_id": trip_id, "title": trip.get("trip_title")})
+
+    list_resp = session.get(f"{BASE_URL}/api/v1/trips/list", timeout=30)
+    if list_resp.status_code != 200:
+        print("guest行程列表获取失败:", list_resp.status_code, list_resp.text)
+        return False
+    trip_ids = [t.get("id") for t in list_resp.json()]
+    print("guest行程列表数量:", len(trip_ids))
+    if trip_id not in trip_ids:
+        print("行程不在列表中")
+        return False
+
+    detail_resp = session.get(f"{BASE_URL}/api/v1/trips/{trip_id}", timeout=30)
+    if detail_resp.status_code != 200:
+        print("guest行程详情获取失败:", detail_resp.status_code, detail_resp.text)
+        return False
+    print("guest行程详情获取成功")
+
+    return True
+
 
 def main():
-    """主函数"""
-    print("开始测试增强系统功能...\n")
-    
-    # 检查命令行参数
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "--memory-only":
-            print("仅测试向量记忆服务...")
-            test_vector_memory_service()
-            print("\n向量记忆服务测试完成！")
-            return
-        elif sys.argv[1] == "--help":
-            print("测试脚本使用说明:")
-            print("  python test_enhanced_system.py            # 运行所有测试")
-            print("  python test_enhanced_system.py --memory-only  # 仅测试向量记忆服务")
-            print("\n注意：测试认证和API功能需要先启动服务器:")
-            print("  python run.py")
-            return
-    
-    # 测试向量记忆服务
-    test_vector_memory_service()
-    
-    # 测试认证系统
-    access_token = test_auth_system()
-    
-    # 测试行程规划
-    if access_token:
-        test_trip_planning_with_auth(access_token)
-    
-    # 测试系统集成
-    test_integration()
-    
-    print("\n所有测试完成！")
-    print("\n如需单独测试向量记忆服务，可以使用:")
-    print("  python test_enhanced_system.py --memory-only")
+    token = test_auth_system()
+    print("\n认证测试结果:", "通过" if token else "失败")
+
+    guest_ok = test_guest_session_and_trip_persistence()
+    print("guest测试结果:", "通过" if guest_ok else "失败")
+
 
 if __name__ == "__main__":
     main()

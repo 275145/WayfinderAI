@@ -29,6 +29,8 @@ export const useAuthStore = defineStore('auth', () => {
     // 保存到localStorage
     localStorage.setItem('access_token', accessToken)
     localStorage.setItem('user_info', JSON.stringify(userInfo))
+    // 登录后清理访客会话标识，避免歧义
+    localStorage.removeItem('guest_session_id')
   }
 
   /**
@@ -60,6 +62,7 @@ export const useAuthStore = defineStore('auth', () => {
     // 清除localStorage
     localStorage.removeItem('access_token')
     localStorage.removeItem('user_info')
+    localStorage.removeItem('guest_session_id')
   }
 
   /**

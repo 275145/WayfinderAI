@@ -92,6 +92,12 @@ export interface DailyPlan {
 
 // 行程规划响应模型（与后端 TripPlanResponse 对齐）
 export interface TripPlanResponse {
+  id?: string
+  created_at?: string
+  updated_at?: string
+  version?: number
+  city_support_level?: string
+  city_support_message?: string
   trip_title: string
   total_budget: BudgetBreakdown
   hotels: Hotel[]
@@ -151,7 +157,7 @@ export interface RegisterRequest {
 export interface User {
   user_id: string
   username: string
-  user_type: string  // 'registered'
+  user_type: 'registered' | 'guest'
   phone?: string
   gender?: 'male' | 'female' | 'other'
   birthday?: string

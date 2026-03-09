@@ -11,6 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from app.observability.logger import default_logger as logger
 from app.config import settings
+from app.services.redis_service import redis_service
 
 class AuthMiddleware(BaseHTTPMiddleware):
     """用户认证中间件"""
@@ -19,7 +20,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.jwt_secret = jwt_secret or settings.JWT_SECRET
         self.jwt_expiry_hours = jwt_expiry_hours
-        self.guest_sessions = {}  # 简单内存存储，生产环境应使用Redis
         
     async def dispatch(self, request: Request, call_next) -> Response:
         """
@@ -30,10 +30,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
         4. 将用户信息添加到请求状态中
         """
         # 跳过健康检查和认证端点
-        if request.url.path in ["/health", "/auth/login", "/auth/register"]:
+        if request.url.path in [
+            "/health",
+            "/api/v1/auth/login",
+            "/api/v1/auth/register"
+        ]:
             return await call_next(request)
             
         user_info = None
+        need_set_guest_cookie = False
+        guest_id = None
         
         # 1. 尝试JWT认证
         auth_header = request.headers.get("Authorization")
@@ -45,40 +51,35 @@ class AuthMiddleware(BaseHTTPMiddleware):
         
         # 2. 尝试访客认证
         if not user_info:
-            guest_id = request.cookies.get("guest_id")
-            if guest_id and guest_id in self.guest_sessions:
-                user_info = self.guest_sessions[guest_id]
+            # 优先使用可迁移的Header会话标识（支持清Cookie后恢复/跨设备迁移）
+            guest_id = request.headers.get("X-Guest-Session") or request.cookies.get("guest_id")
+            if guest_id:
+                # 服务端会话表（Redis） + 续期
+                user_info = redis_service.create_or_get_guest_session(guest_id)
                 logger.info(f"访客认证成功 - GuestID: {guest_id}")
             else:
-                # 3. 创建新的访客会话
+                # 创建新的访客会话
                 guest_id = str(uuid.uuid4())
-                user_info = {
-                    "user_id": f"guest_{guest_id}",
-                    "user_type": "guest",
-                    "guest_id": guest_id,
-                    "created_at": datetime.now().isoformat()
-                }
-                self.guest_sessions[guest_id] = user_info
+                user_info = redis_service.create_or_get_guest_session(guest_id)
+                need_set_guest_cookie = True
                 logger.info(f"创建新访客会话 - GuestID: {guest_id}")
-                
-                # 在响应中设置Cookie
-                response = await call_next(request)
-                response.set_cookie(
-                    key="guest_id",
-                    value=guest_id,
-                    max_age=timedelta(days=30).total_seconds(),
-                    httponly=True,
-                    secure=False,  # 开发环境设为False，生产环境应为True
-                    samesite="lax"
-                )
-                # 将用户信息添加到请求状态
-                request.state.user = user_info
-                return response
         
         # 将用户信息添加到请求状态
         request.state.user = user_info
-        
-        return await call_next(request)
+        response = await call_next(request)
+
+        # 为新访客设置cookie（必须在响应阶段设置）
+        if need_set_guest_cookie and guest_id:
+            response.set_cookie(
+                key="guest_id",
+                value=guest_id,
+                max_age=int(timedelta(days=30).total_seconds()),
+                httponly=True,
+                secure=False,  # 开发环境设为False，生产环境应为True
+                samesite="lax"
+            )
+
+        return response
     
     def _verify_jwt_token(self, token: str) -> Optional[Dict[str, Any]]:
         """验证JWT令牌"""

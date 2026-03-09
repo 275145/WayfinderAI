@@ -69,6 +69,18 @@ class RedisService:
     def _generate_user_trips_list_key(self, user_id: str) -> str:
         """生成用户行程列表的Redis键"""
         return f"user_trips:{user_id}"
+
+    def _generate_guest_session_key(self, guest_id: str) -> str:
+        """生成访客会话Redis键"""
+        return f"guest_session:{guest_id}"
+
+    def _generate_trip_versions_key(self, trip_id: str) -> str:
+        """生成行程版本历史Redis键"""
+        return f"trip_versions:{trip_id}"
+
+    def _generate_trip_task_key(self, task_id: str) -> str:
+        """生成行程任务Redis键"""
+        return f"trip_task:{task_id}"
     
     def _hash_password(self, password: str) -> str:
         """
@@ -419,6 +431,55 @@ class RedisService:
         except Exception as e:
             logger.error(f"获取用户名列表失败: {str(e)}")
             return []
+
+    # ============ 访客会话相关方法 ============
+
+    def create_or_get_guest_session(self, guest_id: str, ttl_seconds: int = 30 * 24 * 60 * 60) -> Dict[str, Any]:
+        """
+        创建或获取访客会话（服务端会话表）
+        """
+        key = self._generate_guest_session_key(guest_id)
+        now = datetime.datetime.now().isoformat()
+        user_id = f"guest_{guest_id}"
+
+        try:
+            session_data = self.redis.hgetall(key)
+            if session_data:
+                # 续期
+                self.redis.hset(key, mapping={"last_seen_at": now})
+                self.redis.expire(key, ttl_seconds)
+                return {
+                    "user_id": session_data.get("user_id", user_id),
+                    "user_type": "guest",
+                    "guest_id": guest_id,
+                    "created_at": session_data.get("created_at", now)
+                }
+
+            # 新建会话
+            session_data = {
+                "user_id": user_id,
+                "user_type": "guest",
+                "guest_id": guest_id,
+                "created_at": now,
+                "last_seen_at": now
+            }
+            self.redis.hset(key, mapping=session_data)
+            self.redis.expire(key, ttl_seconds)
+            return {
+                "user_id": user_id,
+                "user_type": "guest",
+                "guest_id": guest_id,
+                "created_at": now
+            }
+        except Exception as e:
+            logger.error(f"创建/获取访客会话失败: {str(e)}")
+            # 降级返回
+            return {
+                "user_id": user_id,
+                "user_type": "guest",
+                "guest_id": guest_id,
+                "created_at": now
+            }
     
     # ============ 行程相关方法 ============
     
@@ -442,6 +503,12 @@ class RedisService:
         try:
             trip_key = self._generate_trip_key(trip_id)
             user_trips_list_key = self._generate_user_trips_list_key(user_id)
+            versions_key = self._generate_trip_versions_key(trip_id)
+
+            # 初始化版本信息
+            trip_data = dict(trip_data)
+            trip_data.setdefault("version", 1)
+            trip_data.setdefault("updated_at", trip_data.get("created_at", datetime.datetime.now().isoformat()))
             
             # 存储完整行程数据为JSON字符串
             self.redis.set(
@@ -449,6 +516,16 @@ class RedisService:
                 json.dumps(trip_data, ensure_ascii=False),
                 ex=365 * 24 * 60 * 60  # 1年过期
             )
+
+            # 写入版本快照（保留最近20个版本）
+            version_snapshot = {
+                "version": int(trip_data.get("version", 1)),
+                "snapshot_at": datetime.datetime.now().isoformat(),
+                "data": trip_data
+            }
+            self.redis.lpush(versions_key, json.dumps(version_snapshot, ensure_ascii=False))
+            self.redis.ltrim(versions_key, 0, 19)
+            self.redis.expire(versions_key, 365 * 24 * 60 * 60)
             
             # 将行程ID添加到用户的行程列表中（使用有序集合，按创建时间排序）
             created_at = trip_data.get('created_at', datetime.datetime.now().isoformat())
@@ -556,6 +633,198 @@ class RedisService:
         except Exception as e:
             logger.error(f"行程删除失败: {str(e)}")
             return False
+
+    def update_trip(self, user_id: str, trip_id: str, trip_data: Dict[str, Any], expected_version: Optional[int] = None) -> tuple[bool, Optional[str]]:
+        """
+        更新指定行程
+
+        Args:
+            user_id: 用户ID
+            trip_id: 行程ID
+            trip_data: 更新后的完整行程数据
+
+        Returns:
+            (是否更新成功, 错误类型)
+        """
+        try:
+            trip_key = self._generate_trip_key(trip_id)
+            user_trips_list_key = self._generate_user_trips_list_key(user_id)
+            versions_key = self._generate_trip_versions_key(trip_id)
+
+            if not self.redis.exists(trip_key):
+                logger.warning(f"行程不存在 - TripID: {trip_id}")
+                return False, "not_found"
+
+            # 验证行程归属
+            is_member = self.redis.zscore(user_trips_list_key, trip_id)
+            if is_member is None:
+                logger.warning(f"行程不属于当前用户 - UserID: {user_id}, TripID: {trip_id}")
+                return False, "forbidden"
+
+            # 保留原创建时间和ID
+            old_trip = self.get_trip(trip_id) or {}
+            current_version = int(old_trip.get("version", 1))
+
+            # 乐观锁：版本冲突保护
+            if expected_version is not None and expected_version != current_version:
+                logger.warning(
+                    f"行程版本冲突 - TripID: {trip_id}, expected={expected_version}, current={current_version}"
+                )
+                return False, "version_conflict"
+
+            trip_data["id"] = trip_id
+            trip_data["created_at"] = old_trip.get("created_at", datetime.datetime.now().isoformat())
+            trip_data["updated_at"] = datetime.datetime.now().isoformat()
+            trip_data["version"] = current_version + 1
+
+            self.redis.set(
+                trip_key,
+                json.dumps(trip_data, ensure_ascii=False),
+                ex=365 * 24 * 60 * 60
+            )
+
+            # 追加版本快照
+            version_snapshot = {
+                "version": int(trip_data["version"]),
+                "snapshot_at": datetime.datetime.now().isoformat(),
+                "data": trip_data
+            }
+            self.redis.lpush(versions_key, json.dumps(version_snapshot, ensure_ascii=False))
+            self.redis.ltrim(versions_key, 0, 19)
+            self.redis.expire(versions_key, 365 * 24 * 60 * 60)
+            logger.info(f"行程更新成功 - UserID: {user_id}, TripID: {trip_id}")
+            return True, None
+        except Exception as e:
+            logger.error(f"行程更新失败: {str(e)}")
+            return False, "internal_error"
+
+    def list_trip_versions(self, user_id: str, trip_id: str, limit: int = 20) -> List[Dict[str, Any]]:
+        """
+        获取行程版本历史（按新到旧）
+        """
+        try:
+            user_trips_list_key = self._generate_user_trips_list_key(user_id)
+            if self.redis.zscore(user_trips_list_key, trip_id) is None:
+                return []
+
+            versions_key = self._generate_trip_versions_key(trip_id)
+            items = self.redis.lrange(versions_key, 0, max(limit - 1, 0))
+            versions = []
+            for item in items:
+                try:
+                    parsed = json.loads(item)
+                    versions.append({
+                        "version": parsed.get("version"),
+                        "snapshot_at": parsed.get("snapshot_at"),
+                        "trip_title": (parsed.get("data") or {}).get("trip_title", "")
+                    })
+                except Exception:
+                    continue
+            return versions
+        except Exception as e:
+            logger.error(f"获取行程版本历史失败: {str(e)}")
+            return []
+
+    def rollback_trip(self, user_id: str, trip_id: str, target_version: int) -> tuple[bool, Optional[str]]:
+        """
+        回滚行程到指定版本（生成新版本）
+        """
+        try:
+            user_trips_list_key = self._generate_user_trips_list_key(user_id)
+            if self.redis.zscore(user_trips_list_key, trip_id) is None:
+                return False, "forbidden"
+
+            versions_key = self._generate_trip_versions_key(trip_id)
+            items = self.redis.lrange(versions_key, 0, 99)
+            target_snapshot = None
+            for item in items:
+                parsed = json.loads(item)
+                if int(parsed.get("version", -1)) == int(target_version):
+                    target_snapshot = parsed
+                    break
+
+            if not target_snapshot:
+                return False, "version_not_found"
+
+            current_trip = self.get_trip(trip_id)
+            if not current_trip:
+                return False, "not_found"
+            current_version = int(current_trip.get("version", 1))
+
+            rollback_data = dict(target_snapshot.get("data", {}))
+            rollback_data["id"] = trip_id
+            rollback_data["created_at"] = current_trip.get("created_at", datetime.datetime.now().isoformat())
+            rollback_data["updated_at"] = datetime.datetime.now().isoformat()
+            rollback_data["version"] = current_version + 1
+            rollback_data["rollback_from_version"] = target_version
+
+            trip_key = self._generate_trip_key(trip_id)
+            self.redis.set(trip_key, json.dumps(rollback_data, ensure_ascii=False), ex=365 * 24 * 60 * 60)
+
+            new_snapshot = {
+                "version": rollback_data["version"],
+                "snapshot_at": datetime.datetime.now().isoformat(),
+                "data": rollback_data
+            }
+            self.redis.lpush(versions_key, json.dumps(new_snapshot, ensure_ascii=False))
+            self.redis.ltrim(versions_key, 0, 19)
+            self.redis.expire(versions_key, 365 * 24 * 60 * 60)
+            return True, None
+        except Exception as e:
+            logger.error(f"回滚行程失败: {str(e)}")
+            return False, "internal_error"
+
+    # ============ 行程任务相关方法 ============
+
+    def create_trip_task(self, task_id: str, user_id: str, request_data: Dict[str, Any]) -> bool:
+        try:
+            key = self._generate_trip_task_key(task_id)
+            now = datetime.datetime.now().isoformat()
+            payload = {
+                "task_id": task_id,
+                "user_id": user_id,
+                "status": "pending",
+                "progress": "0",
+                "message": "任务已创建，等待调度",
+                "created_at": now,
+                "updated_at": now,
+                "request_data": json.dumps(request_data, ensure_ascii=False),
+                "result_trip_id": "",
+                "error": "",
+                "city_support_level": "",
+                "city_support_message": ""
+            }
+            self.redis.hset(key, mapping=payload)
+            self.redis.expire(key, 24 * 60 * 60)
+            return True
+        except Exception as e:
+            logger.error(f"创建行程任务失败: {str(e)}")
+            return False
+
+    def update_trip_task(self, task_id: str, **fields) -> bool:
+        try:
+            key = self._generate_trip_task_key(task_id)
+            if not self.redis.exists(key):
+                return False
+            fields = {k: (json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else str(v)) for k, v in fields.items()}
+            fields["updated_at"] = datetime.datetime.now().isoformat()
+            self.redis.hset(key, mapping=fields)
+            self.redis.expire(key, 24 * 60 * 60)
+            return True
+        except Exception as e:
+            logger.error(f"更新行程任务失败: {str(e)}")
+            return False
+
+    def get_trip_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+        try:
+            key = self._generate_trip_task_key(task_id)
+            data = self.redis.hgetall(key)
+            if not data:
+                return None
+            return data
+        except Exception as e:
+            logger.error(f"获取行程任务失败: {str(e)}")
+            return None
     
     def close(self):
         """关闭Redis连接"""

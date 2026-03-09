@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # from app.services.memory_service import memory_service  # 替换为向量记忆服务
 from app.services.vector_memory_service import VectorMemoryService
 from app.services.context_manager import ContextManager, get_context_manager
+from app.services.city_service import city_support_service
 from app.agents.agent_communication import communication_hub
 from app.agents.specialized_agents import (
     AttractionSearchAgent,
@@ -103,15 +104,12 @@ class PlannerAgent:
         Returns:
             是否在范围内
         """
-        if city not in CITY_BOUNDS:
-            # 如果城市不在预定义列表中，给出警告并拒绝验证
+        bounds = city_support_service.get_bounds(city) or CITY_BOUNDS.get(city)
+        if not bounds:
             logger.warning(
-                f"⚠️ 城市 '{city}' 不在支持的城市范围内，该城市可能无法提供精确的行程规划。"
-                f"目前支持的城市包括：{', '.join(list(CITY_BOUNDS.keys())[:10])} 等30个热门旅游城市。"
+                f"⚠️ 城市 '{city}' 暂无可用边界配置，该城市无法进行地理精校验。"
             )
-            return False  # 不再宽容处理，拒绝不在列表中的城市
-        
-        bounds = CITY_BOUNDS[city]
+            return False
         is_valid = (
             bounds["lat_min"] <= lat <= bounds["lat_max"] and
             bounds["lng_min"] <= lng <= bounds["lng_max"]

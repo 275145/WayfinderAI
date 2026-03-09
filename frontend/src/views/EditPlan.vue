@@ -5,6 +5,7 @@
       <div class="header-content">
         <h2>✏️ 编辑行程</h2>
         <div class="actions">
+          <el-button @click="openVersionDialog" :disabled="!editablePlan?.id">版本历史</el-button>
           <el-button @click="goBack">取消</el-button>
           <el-button type="primary" @click="saveAndPreview">保存并预览</el-button>
         </div>
@@ -243,6 +244,19 @@
   <el-empty v-else description="暂无可编辑的行程">
     <el-button type="primary" @click="goBack">返回首页</el-button>
   </el-empty>
+
+  <el-dialog v-model="versionDialogVisible" title="版本历史" width="560px">
+    <el-table :data="versionList" size="small" v-loading="versionLoading">
+      <el-table-column prop="version" label="版本" width="90" />
+      <el-table-column prop="snapshot_at" label="时间" min-width="200" />
+      <el-table-column prop="trip_title" label="标题" min-width="160" />
+      <el-table-column label="操作" width="100">
+        <template #default="scope">
+          <el-button size="small" type="warning" @click="rollbackTo(scope.row.version)">回滚</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -252,10 +266,14 @@ import { ElMessage } from 'element-plus'
 import { Plus, Location, Rank, Delete, RefreshRight } from '@element-plus/icons-vue'
 import MapView from '@/components/MapView.vue'
 import type { TripPlanResponse, DailyPlan, Attraction, Dining, Hotel, MapPoint } from '@/types'
+import { tripApi } from '@/services/api'
 
 const router = useRouter()
 const editablePlan = ref<TripPlanResponse | null>(null)
 const activeDay = ref(0)
+const versionDialogVisible = ref(false)
+const versionLoading = ref(false)
+const versionList = ref<Array<{ version: number; snapshot_at: string; trip_title: string }>>([])
 
 // 拖拽相关状态
 const draggedPos = ref<{ dayIndex: number; attrIndex: number } | null>(null)
@@ -543,7 +561,7 @@ const goBack = () => {
 }
 
 // 保存并预览
-const saveAndPreview = () => {
+const saveAndPreview = async () => {
   if (!editablePlan.value) return
 
   if (
@@ -553,7 +571,37 @@ const saveAndPreview = () => {
     ;(editablePlan.value.total_budget as any).total = totalBudget.value
   }
 
+  try {
+    // 如果存在trip_id，优先持久化到后端（支持guest和登录用户）
+    if (editablePlan.value.id) {
+      const updated = await tripApi.updateTripWithVersion(
+        editablePlan.value.id,
+        editablePlan.value,
+        editablePlan.value.version
+      )
+      editablePlan.value = updated
+    }
+  } catch (error: any) {
+    if (String(error?.message || '').includes('版本冲突')) {
+      ElMessage.error('保存失败：检测到版本冲突，请先刷新最新版本后再保存')
+      return
+    }
+    ElMessage.warning(error?.message || '后端保存失败，已保存到本地预览')
+  }
+
   sessionStorage.setItem('currentTripPlan', JSON.stringify(editablePlan.value))
+
+  // 同步更新本地行程列表缓存
+  try {
+    const savedTrips = JSON.parse(localStorage.getItem('myTrips') || '[]')
+    const idx = savedTrips.findIndex((t: any) => t.id === editablePlan.value?.id)
+    if (idx >= 0) {
+      savedTrips[idx] = editablePlan.value
+      localStorage.setItem('myTrips', JSON.stringify(savedTrips))
+    }
+  } catch {
+    // 忽略本地缓存更新异常
+  }
 
   ElMessage.success('保存成功！')
 
@@ -561,6 +609,33 @@ const saveAndPreview = () => {
     name: 'Result',
     state: { tripPlan: editablePlan.value }
   })
+}
+
+const openVersionDialog = async () => {
+  if (!editablePlan.value?.id) return
+  versionDialogVisible.value = true
+  versionLoading.value = true
+  try {
+    const data = await tripApi.getTripVersions(editablePlan.value.id)
+    versionList.value = data.versions || []
+  } catch (error: any) {
+    ElMessage.error(error?.message || '加载版本历史失败')
+  } finally {
+    versionLoading.value = false
+  }
+}
+
+const rollbackTo = async (version: number) => {
+  if (!editablePlan.value?.id) return
+  try {
+    const rolled = await tripApi.rollbackTrip(editablePlan.value.id, version)
+    editablePlan.value = rolled
+    sessionStorage.setItem('currentTripPlan', JSON.stringify(rolled))
+    ElMessage.success(`已回滚到版本 ${version}`)
+    versionDialogVisible.value = false
+  } catch (error: any) {
+    ElMessage.error(error?.message || '回滚失败')
+  }
 }
 </script>
 

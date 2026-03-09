@@ -12,19 +12,19 @@ const routes: RouteRecordRaw[] = [
     path: '/my-trips',
     name: 'MyTrips',
     component: () => import('@/views/MyTrips.vue'),
-    meta: { title: '我的行程', requiresAuth: true }
+    meta: { title: '我的行程', requiresAuth: false }
   },
   {
     path: '/result',
     name: 'Result',
     component: () => import('@/views/Result.vue'),
-    meta: { title: '行程详情', requiresAuth: true }
+    meta: { title: '行程详情', requiresAuth: false }
   },
   {
     path: '/edit',
     name: 'EditPlan',
     component: () => import('@/views/EditPlan.vue'),
-    meta: { title: '编辑行程', requiresAuth: true }
+    meta: { title: '编辑行程', requiresAuth: false }
   },
   {
     path: '/login',

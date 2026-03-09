@@ -11,7 +11,7 @@
             <el-icon><House /></el-icon>
             首页
           </router-link>
-          <router-link to="/my-trips" class="nav-item" v-if="authStore.isAuthenticated">
+          <router-link to="/my-trips" class="nav-item">
             <el-icon><Document /></el-icon>
             我的行程
           </router-link>

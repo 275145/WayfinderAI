@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     # AMAP MCP Server
     AMAP_MCP_SERVER_URL: str = "http://127.0.0.1:8000"
 
+    # 城市支持配置
+    CITY_CONFIG_PATH: str = "app/data/city_support.json"
+
     # JWT 认证配置
     JWT_SECRET: str = "your-secret-key-change-in-production"
     JWT_EXPIRY_HOURS: int = 24

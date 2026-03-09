@@ -5,10 +5,14 @@
 import sys
 import requests
 import json
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
 # API基础URL
 BASE_URL = "http://localhost:8000"
+
+
+def future_date(days_from_today: int) -> str:
+    return (date.today() + timedelta(days=days_from_today)).isoformat()
 
 
 def test_trip_deletion():
@@ -66,8 +70,8 @@ def test_trip_deletion():
     print("\n2. 创建测试行程...")
     trip_request = {
         "destination": "北京",
-        "start_date": "2024-10-01",
-        "end_date": "2024-10-03",
+        "start_date": future_date(7),
+        "end_date": future_date(9),
         "preferences": ["历史", "文化"],
         "hotel_preferences": ["经济型"],
         "budget": "中等"

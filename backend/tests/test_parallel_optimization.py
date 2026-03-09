@@ -12,13 +12,18 @@ from app.observability.logger import default_logger as logger
 from app.config import settings
 import sys
 import traceback
+from datetime import date, timedelta
+
+
+def future_date(days_from_today: int) -> str:
+    return (date.today() + timedelta(days=days_from_today)).isoformat()
 
 def create_test_request(destination="北京", days=3):
     """创建测试请求"""
     return TripPlanRequest(
         destination=destination,
-        start_date="2024-10-01",
-        end_date=f"2024-10-{days:02d}",
+        start_date=future_date(7),
+        end_date=future_date(7 + max(days - 1, 0)),
         preferences=["历史", "文化"],
         hotel_preferences=["经济型"],
         budget="中等"

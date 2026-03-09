@@ -10,13 +10,17 @@ backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from app.services.unsplash_service import UnsplashService
+from app.config import settings
 
 
 def test_attraction_images():
     """测试真实景点名称的图片搜索"""
     
     # 初始化 Unsplash 服务
-    service = UnsplashService(access_key="qoRz2cAQwJD5kPyrN7_2dqdn_1Kfp-DXq4TQKK_dgI8")
+    if not settings.UNSPLASH_ACCESS_KEY:
+        print("请先在 .env 中配置 UNSPLASH_ACCESS_KEY")
+        return
+    service = UnsplashService(access_key=settings.UNSPLASH_ACCESS_KEY)
     
     # 模拟几个真实的景点名称（来自北京行程）
     test_cases = [

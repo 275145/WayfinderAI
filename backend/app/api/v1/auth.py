@@ -190,6 +190,13 @@ def get_current_user_info(request: Request, current_user: dict = Depends(get_cur
     Returns:
         用户信息
     """
+    if current_user.get("user_type") == "guest":
+        return UserResponse(
+            user_id=current_user.get("user_id", ""),
+            username="guest",
+            user_type="guest"
+        )
+
     user_username = current_user.get("username", "")
     
     # 从Redis获取用户完整信息
@@ -232,6 +239,12 @@ def update_user_profile(
     Returns:
         更新后的用户信息
     """
+    if current_user.get("user_type") == "guest":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="访客用户不支持修改资料，请先注册登录"
+        )
+
     user_username = current_user.get("username", "")
     
     # 使用Redis更新用户信息
@@ -289,6 +302,12 @@ def change_password(
     Returns:
         操作结果
     """
+    if current_user.get("user_type") == "guest":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="访客用户不支持修改密码，请先注册登录"
+        )
+
     user_username = current_user.get("username", "")
     
     # 使用Redis更新密码
@@ -338,6 +357,27 @@ def logout(request: Request, current_user: dict = Depends(get_current_user)):
     # 3. 记录退出时间等
     
     return {"message": "退出登录成功"}
+
+
+@router.post("/guest")
+def get_or_create_guest_session(request: Request, current_user: dict = Depends(get_current_user)):
+    """
+    获取当前访客会话信息（若是已登录用户则返回用户信息）。
+    主要用于前端初始化 guest 模式。
+    """
+    if current_user.get("user_type") == "guest":
+        return {
+            "user_id": current_user.get("user_id"),
+            "guest_session_id": current_user.get("guest_id"),
+            "user_type": "guest",
+            "message": "访客会话已就绪"
+        }
+
+    return {
+        "user_id": current_user.get("user_id"),
+        "user_type": "registered",
+        "message": "当前为登录用户"
+    }
 
 @router.post("/upload-avatar")
 async def upload_avatar(

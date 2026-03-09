@@ -74,6 +74,10 @@ class TripPlanResponse(BaseModel):
 
     id: Optional[str] = Field(None, description="行程ID")
     created_at: Optional[str] = Field(None, description="创建时间")
+    updated_at: Optional[str] = Field(None, description="更新时间")
+    version: Optional[int] = Field(1, description="行程版本号")
+    city_support_level: Optional[str] = Field(None, description="城市支持等级")
+    city_support_message: Optional[str] = Field(None, description="城市支持提示文案")
     trip_title: str = Field(..., description="行程标题")
     total_budget: BudgetBreakdown = Field(
         ..., description="整体预算（包含交通、餐饮、酒店、景点门票费用拆分）"
