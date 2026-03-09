@@ -90,6 +90,10 @@ class PlannerAgent:
                 auto_expand=True
             )
         self.tool_registry.register_tool(self.amap_tool)
+        # 关键修复：将MCP展开后的子工具一并注册，确保可直接调用
+        # 例如: amap_maps_text_search / amap_maps_weather
+        for expanded_tool in self.amap_tool.get_expanded_tools():
+            self.tool_registry.register_tool(expanded_tool)
         
         logger.info("✅ 多智能体系统初始化完成（增强版）")
     def _validate_location_in_city(self, lat: float, lng: float, city: str) -> bool:
