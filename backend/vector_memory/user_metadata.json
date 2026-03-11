@@ -6222,5 +6222,391 @@
     },
     "text_representation": "偏好类型: trip_preferences 目的地: 北京 旅行偏好: 历史, 美食 酒店偏好: 舒适型 预算水平: 中等",
     "timestamp": "2026-03-09T16:11:59.293566"
+  },
+  "96": {
+    "user_id": "guest_46803697-562e-49a6-a6bc-368f249702a1",
+    "type": "preference",
+    "preference_type": "trip_planning",
+    "data": {
+      "preference_type": "trip_planning",
+      "destination": "杭州",
+      "preferences": [
+        "自然",
+        "历史"
+      ],
+      "trip_result": "```json\n{\n  \"trip_title\": \"西湖春色与南宋古韵之旅\",\n  \"total_budget\": {\n    \"transport_cost\": 450.0,\n    \"dining_cost\": 1200.0,\n    \"hotel_cost\": 1000.0,\n    \"attraction_ticket_cost\": 380.0,\n    \"total\": 3030.0\n"
+    },
+    "text_representation": "偏好类型: trip_planning 目的地: 杭州 旅行偏好: 自然, 历史",
+    "timestamp": "2026-03-10T11:05:46.953841"
+  },
+  "97": {
+    "user_id": "guest_46803697-562e-49a6-a6bc-368f249702a1",
+    "type": "preference",
+    "preference_type": "trip_request",
+    "data": {
+      "destination": "杭州",
+      "preferences": [
+        "自然",
+        "历史"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "舒适型"
+      ],
+      "budget": "中等",
+      "trip_title": "西湖春色与南宋古韵之旅"
+    },
+    "text_representation": "偏好类型: trip_request 目的地: 杭州 旅行偏好: 自然, 历史 酒店偏好: 经济型, 舒适型 预算水平: 中等",
+    "timestamp": "2026-03-10T11:05:50.021989"
+  },
+  "98": {
+    "user_id": "guest_46803697-562e-49a6-a6bc-368f249702a1",
+    "type": "trip",
+    "data": {
+      "destination": "杭州",
+      "start_date": "2026-03-10",
+      "end_date": "2026-03-13",
+      "preferences": [
+        "自然",
+        "历史"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "舒适型"
+      ],
+      "budget": "中等",
+      "trip_title": "西湖春色与南宋古韵之旅",
+      "days": [
+        {
+          "day": 1,
+          "theme": "西湖自然与人文初探",
+          "weather": {
+            "date": "2026-03-10",
+            "day_weather": "晴",
+            "night_weather": "晴",
+            "day_temp": "15",
+            "night_temp": "4",
+            "day_wind": "东风1-3级",
+            "night_wind": "东风1-3级"
+          },
+          "recommended_hotel": {
+            "name": "雅诗酒店(西湖湖滨定安路地铁站店)",
+            "address": "解放路172号2层",
+            "location": {
+              "lat": 30.253,
+              "lng": 120.161
+            },
+            "price": "300元/晚",
+            "rating": "4.5",
+            "distance_to_main_attraction_km": 0.5
+          },
+          "attractions": [
+            {
+              "name": "杭州西湖风景名胜区",
+              "type": "自然景观",
+              "rating": "4.9",
+              "suggested_duration_hours": 4.0,
+              "description": "世界文化遗产，包含苏堤春晓、断桥残雪等经典景观",
+              "address": "龙井路1号",
+              "location": {
+                "lat": 30.244,
+                "lng": 120.148
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1714903052758-ec290a26de9a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlOUQlQUQlRTUlQjclOUUlRTglQTUlQkYlRTYlQjklOTYlRTklQTMlOEUlRTYlOTklQUYlRTUlOTAlOEQlRTglODMlOUMlRTUlOEMlQkElMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzczMTExOTUwfDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            },
+            {
+              "name": "宝石山",
+              "type": "登山观景点",
+              "rating": "4.7",
+              "suggested_duration_hours": 2.0,
+              "description": "登顶可俯瞰西湖全景，日落时分尤为壮观",
+              "address": "曙光路43附近",
+              "location": {
+                "lat": 30.254,
+                "lng": 120.143
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1697395886596-fd611f9032ba?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzczMTExOTUxfDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "知味观·味庄",
+              "address": "杨公堤18号",
+              "location": {
+                "lat": 30.241,
+                "lng": 120.135
+              },
+              "cost_per_person": "80",
+              "rating": "4.6"
+            }
+          ],
+          "budget": {
+            "transport_cost": 80.0,
+            "dining_cost": 240.0,
+            "hotel_cost": 300.0,
+            "attraction_ticket_cost": 0.0,
+            "total": 620.0
+          }
+        },
+        {
+          "day": 2,
+          "theme": "南宋历史文化寻踪",
+          "weather": {
+            "date": "2026-03-11",
+            "day_weather": "多云",
+            "night_weather": "小雨",
+            "day_temp": "18",
+            "night_temp": "6",
+            "day_wind": "东北风1-3级",
+            "night_wind": "东北风1-3级"
+          },
+          "recommended_hotel": {
+            "name": "YHA荷方小院(西湖河坊街店)",
+            "address": "河坊街大井巷67号",
+            "location": {
+              "lat": 30.244,
+              "lng": 120.164
+            },
+            "price": "250元/晚",
+            "rating": "4.3",
+            "distance_to_main_attraction_km": 0.3
+          },
+          "attractions": [
+            {
+              "name": "河坊街历史文化街区",
+              "type": "历史文化",
+              "rating": "4.6",
+              "suggested_duration_hours": 3.0,
+              "description": "南宋御街遗址，传统建筑与非遗文化集中展示区",
+              "address": "上城区河坊街",
+              "location": {
+                "lat": 30.244,
+                "lng": 120.164
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1696162924194-9a24c74b13fd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlQjIlQjMlRTUlOUQlOEElRTglQTElOTclRTUlOEUlODYlRTUlOEYlQjIlRTYlOTYlODclRTUlOEMlOTYlRTglQTElOTclRTUlOEMlQkElMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzczMTExOTUwfDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            },
+            {
+              "name": "胡雪岩故居",
+              "type": "历史建筑",
+              "rating": "4.8",
+              "suggested_duration_hours": 1.5,
+              "description": "晚清首富胡雪岩的私家花园，江南园林代表作",
+              "address": "十五奎巷8号",
+              "location": {
+                "lat": 30.242,
+                "lng": 120.167
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1696598635238-2869ed535aee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTglODMlQTElRTklOUIlQUElRTUlQjIlQTklRTYlOTUlODUlRTUlQjElODUlMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzczMTExOTUwfDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "30"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "新白鹿餐厅(河坊街店)",
+              "address": "河坊街128号",
+              "location": {
+                "lat": 30.243,
+                "lng": 120.163
+              },
+              "cost_per_person": "60",
+              "rating": "4.4"
+            }
+          ],
+          "budget": {
+            "transport_cost": 60.0,
+            "dining_cost": 180.0,
+            "hotel_cost": 250.0,
+            "attraction_ticket_cost": 30.0,
+            "total": 520.0
+          }
+        },
+        {
+          "day": 3,
+          "theme": "森林氧吧与自然生态",
+          "weather": {
+            "date": "2026-03-12",
+            "day_weather": "晴",
+            "night_weather": "晴",
+            "day_temp": "16",
+            "night_temp": "6",
+            "day_wind": "东北风1-3级",
+            "night_wind": "东北风1-3级"
+          },
+          "recommended_hotel": {
+            "name": "杭州尼可城市酒店",
+            "address": "中山中路288号",
+            "location": {
+              "lat": 30.251,
+              "lng": 120.165
+            },
+            "price": "280元/晚",
+            "rating": "4.4",
+            "distance_to_main_attraction_km": 1.2
+          },
+          "attractions": [
+            {
+              "name": "杭州半山国家森林公园",
+              "type": "森林生态",
+              "rating": "4.5",
+              "suggested_duration_hours": 4.0,
+              "description": "城市绿肺，拥有千年古树群和湿地景观",
+              "address": "半山路北",
+              "location": {
+                "lat": 30.301,
+                "lng": 120.131
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1696598635238-2869ed535aee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlOUQlQUQlRTUlQjclOUUlRTUlOEQlOEElRTUlQjElQjElRTUlOUIlQkQlRTUlQUUlQjYlRTYlQTMlQUUlRTYlOUUlOTclRTUlODUlQUMlRTUlOUIlQUQlMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzczMTExOTUwfDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            },
+            {
+              "name": "湘湖国家旅游度假区",
+              "type": "湖泊风光",
+              "rating": "4.6",
+              "suggested_duration_hours": 3.0,
+              "description": "被称为西湖姐妹湖，春季樱花盛开时节极美",
+              "address": "湘湖路132号",
+              "location": {
+                "lat": 30.135,
+                "lng": 120.225
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1714903052758-ec290a26de9a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTYlQjklOTglRTYlQjklOTYlRTUlOUIlQkQlRTUlQUUlQjYlRTYlOTclODUlRTYlQjglQjglRTUlQkElQTYlRTUlODElODclRTUlOEMlQkElMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzczMTExOTUxfDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "免费"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "湘湖渔港",
+              "address": "湘湖路132号商业街",
+              "location": {
+                "lat": 30.136,
+                "lng": 120.226
+              },
+              "cost_per_person": "70",
+              "rating": "4.3"
+            }
+          ],
+          "budget": {
+            "transport_cost": 150.0,
+            "dining_cost": 210.0,
+            "hotel_cost": 280.0,
+            "attraction_ticket_cost": 0.0,
+            "total": 640.0
+          }
+        },
+        {
+          "day": 4,
+          "theme": "禅意山水与告别之旅",
+          "weather": {
+            "date": "2026-03-13",
+            "day_weather": "晴",
+            "night_weather": "晴",
+            "day_temp": "16",
+            "night_temp": "6",
+            "day_wind": "东风1-3级",
+            "night_wind": "东风1-3级"
+          },
+          "recommended_hotel": {
+            "name": "布丁严选酒店(杭州河坊街吴山广场地铁站店)",
+            "address": "高银街58号",
+            "location": {
+              "lat": 30.243,
+              "lng": 120.165
+            },
+            "price": "270元/晚",
+            "rating": "4.4",
+            "distance_to_main_attraction_km": 0.4
+          },
+          "attractions": [
+            {
+              "name": "灵隐寺",
+              "type": "宗教文化",
+              "rating": "4.8",
+              "suggested_duration_hours": 3.0,
+              "description": "东南佛国，东晋古刹，融合佛教文化与山林景观",
+              "address": "法云弄1号灵隐寺后",
+              "location": {
+                "lat": 30.241,
+                "lng": 120.114
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1753364971896-a55ebc73361f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTclODElQjUlRTklOUElOTAlRTUlQUYlQkElMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzczMTExOTUxfDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "45"
+            },
+            {
+              "name": "北高峰",
+              "type": "登高观景",
+              "rating": "4.6",
+              "suggested_duration_hours": 2.0,
+              "description": "灵隐寺后山，可乘坐缆车登顶俯瞰西湖",
+              "address": "法云弄1号灵隐寺后",
+              "location": {
+                "lat": 30.245,
+                "lng": 120.116
+              },
+              "image_urls": [
+                "https://images.unsplash.com/photo-1714903052758-ec290a26de9a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mzc5MzZ8MHwxfHNlYXJjaHwxfHwlRTUlOEMlOTclRTklQUIlOTglRTUlQjMlQjAlMjAlRTYlOUQlQUQlRTUlQjclOUV8ZW58MHx8fHwxNzczMTExOTUxfDA&ixlib=rb-4.1.0&q=80&w=1080"
+              ],
+              "ticket_price": "30"
+            }
+          ],
+          "dinings": [
+            {
+              "name": "素心斋素食馆",
+              "address": "灵隐路12号",
+              "location": {
+                "lat": 30.242,
+                "lng": 120.115
+              },
+              "cost_per_person": "50",
+              "rating": "4.5"
+            }
+          ],
+          "budget": {
+            "transport_cost": 160.0,
+            "dining_cost": 150.0,
+            "hotel_cost": 270.0,
+            "attraction_ticket_cost": 75.0,
+            "total": 655.0
+          }
+        }
+      ]
+    },
+    "text_representation": "旅行行程 目的地: 杭州 时间: 2026-03-10 到 2026-03-13 偏好: 自然, 历史 行程标题: 西湖春色与南宋古韵之旅 景点: 杭州西湖风景名胜区, 宝石山, 河坊街历史文化街区, 胡雪岩故居, 杭州半山国家森林公园, 湘湖国家旅游度假区, 灵隐寺, 北高峰",
+    "timestamp": "2026-03-10T11:05:50.106944"
+  },
+  "99": {
+    "user_id": "guest_46803697-562e-49a6-a6bc-368f249702a1",
+    "type": "preference",
+    "preference_type": "trip_preferences",
+    "data": {
+      "destination": "杭州",
+      "preferences": [
+        "自然",
+        "历史"
+      ],
+      "hotel_preferences": [
+        "经济型",
+        "舒适型"
+      ],
+      "budget": "中等"
+    },
+    "text_representation": "偏好类型: trip_preferences 目的地: 杭州 旅行偏好: 自然, 历史 酒店偏好: 经济型, 舒适型 预算水平: 中等",
+    "timestamp": "2026-03-10T11:05:50.134210"
   }
 }
