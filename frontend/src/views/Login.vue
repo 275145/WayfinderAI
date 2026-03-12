@@ -105,14 +105,15 @@ import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { authApi } from '@/services/api'
 import type { LoginRequest, RegisterRequest } from '@/types'
+import type { FormInstance } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 // 表单引用
-const loginFormRef = ref()
-const registerFormRef = ref()
+const loginFormRef = ref<FormInstance>()
+const registerFormRef = ref<FormInstance>()
 
 // 活动标签页
 const activeTab = ref('login')
@@ -163,62 +164,60 @@ const registerRules = {
 const handleLogin = async () => {
   if (!loginFormRef.value) return
   
-  await loginFormRef.value.validate(async (valid) => {
-    if (!valid) return
+  const valid = await loginFormRef.value.validate().catch(() => false)
+  if (!valid) return
+
+  loginLoading.value = true
+  
+  try {
+    const response = await authApi.login(loginForm)
     
-    loginLoading.value = true
+    // 保存认证信息到localStorage
+    localStorage.setItem('access_token', response.access_token)
+    localStorage.setItem('user_info', JSON.stringify(response.user))
     
-    try {
-      const response = await authApi.login(loginForm)
-      
-      // 保存认证信息到localStorage
-      localStorage.setItem('access_token', response.access_token)
-      localStorage.setItem('user_info', JSON.stringify(response.user))
-      
-      // 更新认证状态
-      authStore.setAuth(response.access_token, response.user)
-      
-      ElMessage.success('登录成功！')
-      
-      // 跳转到首页
-      router.push('/')
-    } catch (error: any) {
-      ElMessage.error(error.message || '登录失败，请检查用户名和密码')
-    } finally {
-      loginLoading.value = false
-    }
-  })
+    // 更新认证状态
+    authStore.setAuth(response.access_token, response.user)
+    
+    ElMessage.success('登录成功！')
+    
+    // 跳转到首页
+    router.push('/')
+  } catch (error: any) {
+    ElMessage.error(error.message || '登录失败，请检查用户名和密码')
+  } finally {
+    loginLoading.value = false
+  }
 }
 
 // 处理注册
 const handleRegister = async () => {
   if (!registerFormRef.value) return
   
-  await registerFormRef.value.validate(async (valid) => {
-    if (!valid) return
+  const valid = await registerFormRef.value.validate().catch(() => false)
+  if (!valid) return
+
+  registerLoading.value = true
+  
+  try {
+    const response = await authApi.register(registerForm)
     
-    registerLoading.value = true
+    // 保存认证信息到localStorage
+    localStorage.setItem('access_token', response.access_token)
+    localStorage.setItem('user_info', JSON.stringify(response.user))
     
-    try {
-      const response = await authApi.register(registerForm)
-      
-      // 保存认证信息到localStorage
-      localStorage.setItem('access_token', response.access_token)
-      localStorage.setItem('user_info', JSON.stringify(response.user))
-      
-      // 更新认证状态
-      authStore.setAuth(response.access_token, response.user)
-      
-      ElMessage.success('注册成功！')
-      
-      // 跳转到首页
-      router.push('/')
-    } catch (error: any) {
-      ElMessage.error(error.message || '注册失败，请重试')
-    } finally {
-      registerLoading.value = false
-    }
-  })
+    // 更新认证状态
+    authStore.setAuth(response.access_token, response.user)
+    
+    ElMessage.success('注册成功！')
+    
+    // 跳转到首页
+    router.push('/')
+  } catch (error: any) {
+    ElMessage.error(error.message || '注册失败，请重试')
+  } finally {
+    registerLoading.value = false
+  }
 }
 </script>
 

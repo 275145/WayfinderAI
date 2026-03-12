@@ -7,7 +7,7 @@
         @click="handleExport('pdf')"
       >
         <el-icon><Document /></el-icon>
-        导出 PDF
+        Export PDF
       </el-button>
       <el-button
         type="success"
@@ -15,29 +15,28 @@
         @click="handleExport('image')"
       >
         <el-icon><Picture /></el-icon>
-        导出图片
+        Export Image
       </el-button>
     </el-button-group>
 
-    <!-- 导出配置对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      title="导出设置"
+      title="Export Options"
       width="400px"
     >
       <el-form label-width="100px">
-        <el-form-item label="包含内容">
+        <el-form-item label="Include">
           <el-checkbox-group v-model="exportOptions.includes">
-            <el-checkbox label="budget">预算明细</el-checkbox>
-            <el-checkbox label="map">地图截图</el-checkbox>
-            <el-checkbox label="hotels">酒店信息</el-checkbox>
+            <el-checkbox label="budget">Budget</el-checkbox>
+            <el-checkbox label="map">Map</el-checkbox>
+            <el-checkbox label="hotels">Hotels</el-checkbox>
           </el-checkbox-group>
         </el-form-item>
       </el-form>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmExport">确认导出</el-button>
+        <el-button @click="dialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="confirmExport">Confirm</el-button>
       </template>
     </el-dialog>
   </div>
@@ -47,8 +46,6 @@
 import { ref, reactive, nextTick } from 'vue'
 import { ElMessage, ElLoading } from 'element-plus'
 import { Document, Picture } from '@element-plus/icons-vue'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
 import type { TripPlanResponse } from '@/types'
 
 interface Props {
@@ -66,57 +63,72 @@ const exportOptions = reactive({
   includes: ['budget', 'map', 'hotels']
 })
 
-// 处理导出按钮点击
+let html2canvasLoader: Promise<typeof import('html2canvas').default> | null = null
+let jsPdfLoader: Promise<typeof import('jspdf').default> | null = null
+
+const loadHtml2Canvas = async () => {
+  if (!html2canvasLoader) {
+    html2canvasLoader = import('html2canvas').then((mod) => mod.default)
+  }
+  return html2canvasLoader
+}
+
+const loadJsPdf = async () => {
+  if (!jsPdfLoader) {
+    jsPdfLoader = import('jspdf').then((mod) => mod.default)
+  }
+  return jsPdfLoader
+}
+
 const handleExport = (format: 'pdf' | 'image') => {
   currentFormat.value = format
   dialogVisible.value = true
 }
 
-// 确认导出
 const confirmExport = async () => {
   dialogVisible.value = false
-  
-  // 显示加载（在对话框关闭后）
-  let loadingInstance: any = null
-  
+  exporting.value = true
+
+  let loadingInstance: ReturnType<typeof ElLoading.service> | null = null
+
   try {
-    // 等待Vue DOM更新和对话框动画完成
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 100))
     await nextTick()
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    // 现在显示加载提示
+    await new Promise((resolve) => setTimeout(resolve, 300))
+
     loadingInstance = ElLoading.service({
       lock: true,
-      text: '正在生成文件...',
+      text: 'Generating file...',
       background: 'rgba(0, 0, 0, 0.7)'
     })
-    
+
     if (currentFormat.value === 'pdf') {
       await exportToPDF()
     } else {
       await exportToImage()
     }
-    ElMessage.success('导出成功！')
+
+    ElMessage.success('Export completed')
   } catch (error) {
-    console.error('导出失败:', error)
-    ElMessage.error('导出失败，请重试')
+    console.error('Export failed:', error)
+    ElMessage.error('Export failed, please try again')
   } finally {
     exporting.value = false
-    if (loadingInstance) {
-      loadingInstance.close()
-    }
+    loadingInstance?.close()
   }
 }
 
-// 导出为 PDF
 const exportToPDF = async () => {
   if (!props.contentRef) {
-    ElMessage.warning('未找到内容元素')
+    ElMessage.warning('No export content found')
     return
   }
 
-  // 使用 html2canvas 将内容转为图片
+  const [html2canvas, JsPdf] = await Promise.all([
+    loadHtml2Canvas(),
+    loadJsPdf()
+  ])
+
   const canvas = await html2canvas(props.contentRef, {
     scale: 2,
     useCORS: true,
@@ -124,18 +136,16 @@ const exportToPDF = async () => {
     backgroundColor: '#ffffff'
   })
 
-  // 创建 PDF
-  const imgWidth = 210 // A4 宽度（mm）
+  const imgWidth = 210
   const imgHeight = (canvas.height * imgWidth) / canvas.width
-  const pdf = new jsPDF('p', 'mm', 'a4')
+  const pdf = new JsPdf('p', 'mm', 'a4')
 
-  // 如果内容超过一页，需要分页
   let heightLeft = imgHeight
   let position = 0
 
   const imgData = canvas.toDataURL('image/jpeg', 1.0)
   pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
-  heightLeft -= 297 // A4 高度
+  heightLeft -= 297
 
   while (heightLeft > 0) {
     position = heightLeft - imgHeight
@@ -144,19 +154,17 @@ const exportToPDF = async () => {
     heightLeft -= 297
   }
 
-  // 生成文件名
-  const filename = `${props.tripPlan.trip_title || '行程计划'}_${Date.now()}.pdf`
+  const filename = `${props.tripPlan.trip_title || 'trip-plan'}_${Date.now()}.pdf`
   pdf.save(filename)
 }
 
-// 导出为图片
 const exportToImage = async () => {
   if (!props.contentRef) {
-    ElMessage.warning('未找到内容元素')
+    ElMessage.warning('No export content found')
     return
   }
 
-  // 使用 html2canvas 截图
+  const html2canvas = await loadHtml2Canvas()
   const canvas = await html2canvas(props.contentRef, {
     scale: 2,
     useCORS: true,
@@ -164,25 +172,21 @@ const exportToImage = async () => {
     backgroundColor: '#ffffff'
   })
 
-  // 转为 blob 并下载
   canvas.toBlob((blob) => {
     if (!blob) {
-      ElMessage.error('生成图片失败')
+      ElMessage.error('Failed to generate image')
       return
     }
 
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${props.tripPlan.trip_title || '行程计划'}_${Date.now()}.png`
+    link.download = `${props.tripPlan.trip_title || 'trip-plan'}_${Date.now()}.png`
     link.click()
-
-    // 清理
     URL.revokeObjectURL(url)
   }, 'image/png')
 }
 
-// 快速导出（不显示对话框）
 const quickExport = async (format: 'pdf' | 'image') => {
   currentFormat.value = format
   await confirmExport()

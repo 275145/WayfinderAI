@@ -122,8 +122,17 @@ import type { TripPlanResponse } from '@/types'
 import { tripApi } from '@/services/api'
 
 const router = useRouter()
-const tripsList = ref<Array<{ id: string; trip_title: string; created_at: string } & TripPlanResponse>>([])
+type TripListItem = TripPlanResponse & { id: string; created_at: string }
+const tripsList = ref<TripListItem[]>([])
 const loading = ref(false)
+
+const normalizeTrip = (trip: TripPlanResponse): TripListItem => {
+  return {
+    ...trip,
+    id: trip.id || Date.now().toString(),
+    created_at: trip.created_at || new Date().toISOString()
+  }
+}
 
 // 格式化日期
 const formatDate = (dateString: string) => {
@@ -146,7 +155,7 @@ const loadTrips = async () => {
   try {
     // 优先从后端API获取行程列表
     const trips = await tripApi.getTripsList()
-    tripsList.value = trips
+    tripsList.value = trips.map(normalizeTrip)
     
     // 同步到localStorage作为缓存
     localStorage.setItem('myTrips', JSON.stringify(trips))
@@ -157,7 +166,7 @@ const loadTrips = async () => {
     try {
       const savedTrips = localStorage.getItem('myTrips')
       if (savedTrips) {
-        tripsList.value = JSON.parse(savedTrips)
+        tripsList.value = (JSON.parse(savedTrips) as TripPlanResponse[]).map(normalizeTrip)
         ElMessage.warning('网络异常，已加载本地缓存数据')
       }
     } catch (err) {
@@ -183,8 +192,7 @@ const viewTrip = async (index: number) => {
       
       // 跳转到结果页面
       router.push({
-        name: 'Result',
-        state: { tripPlan: fullTrip }
+        name: 'Result'
       })
       return
     } catch (error) {
@@ -196,17 +204,16 @@ const viewTrip = async (index: number) => {
   // 降级：使用本地已有数据
   sessionStorage.setItem('currentTripPlan', JSON.stringify(trip))
   router.push({
-    name: 'Result',
-    state: { tripPlan: trip }
+    name: 'Result'
   })
 }
 
 // 编辑行程
 const editTrip = (index: number) => {
   const trip = tripsList.value[index]
+  sessionStorage.setItem('currentTripPlan', JSON.stringify(trip))
   router.push({
-    name: 'EditPlan',
-    state: { tripPlan: trip }
+    name: 'EditPlan'
   })
 }
 

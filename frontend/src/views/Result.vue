@@ -301,23 +301,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   Back, 
   Edit, 
   Loading, 
-  Picture, 
   Calendar, 
   Wallet, 
   Location, 
   Sunny, 
   Check 
 } from '@element-plus/icons-vue'
-import MapView from '@/components/MapView.vue'
 import BudgetSummary from '@/components/BudgetSummary.vue'
-import ExportButtons from '@/components/ExportButtons.vue'
 import type { TripPlanResponse, MapPoint, Location as LocationType } from '@/types'
+
+const MapView = defineAsyncComponent(() => import('@/components/MapView.vue'))
+const ExportButtons = defineAsyncComponent(() => import('@/components/ExportButtons.vue'))
 
 const router = useRouter()
 const contentRef = ref<HTMLElement>()
@@ -370,18 +370,11 @@ const sanitizeTripPlan = (plan: TripPlanResponse): TripPlanResponse => {
 
 // 获取行程数据
 onMounted(() => {
-  // 从路由 state 获取数据
-  const state = history.state as { tripPlan?: TripPlanResponse }
+  // 统一从 sessionStorage 读取，避免在 history.state 里传大对象
   let planData: TripPlanResponse | null = null
-
-  if (state?.tripPlan) {
-    planData = state.tripPlan
-  } else {
-    // 如果没有数据，尝试从 sessionStorage 获取
-    const savedPlan = sessionStorage.getItem('currentTripPlan')
-    if (savedPlan) {
-      planData = JSON.parse(savedPlan)
-    }
+  const savedPlan = sessionStorage.getItem('currentTripPlan')
+  if (savedPlan) {
+    planData = JSON.parse(savedPlan)
   }
   
   if (planData) {
@@ -467,9 +460,11 @@ const goBack = () => {
 
 // 编辑行程
 const goEdit = () => {
+  if (tripPlan.value) {
+    sessionStorage.setItem('currentTripPlan', JSON.stringify(tripPlan.value))
+  }
   router.push({ 
-    name: 'EditPlan',
-    state: { tripPlan: tripPlan.value }
+    name: 'EditPlan'
   })
 }
 </script>

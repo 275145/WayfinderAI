@@ -162,7 +162,10 @@ export const authApi = {
    * 创建访客会话
    */
   async createGuestSession(): Promise<{ user_id: string; guest_session_id?: string; user_type: 'guest' | 'registered'; message: string }> {
-    const resp = await apiClient.post('/api/v1/auth/guest')
+    const resp = await apiClient.post<
+      { user_id: string; guest_session_id?: string; user_type: 'guest' | 'registered'; message: string },
+      { user_id: string; guest_session_id?: string; user_type: 'guest' | 'registered'; message: string }
+    >('/api/v1/auth/guest')
     if (resp?.user_type === 'guest' && resp?.guest_session_id) {
       localStorage.setItem('guest_session_id', resp.guest_session_id)
     }

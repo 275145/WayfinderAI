@@ -14,7 +14,7 @@ import datetime
 
 
 # 密码加密轮数
-BCRYPT_ROUNDS = 12
+BCRYPT_ROUNDS = settings.BCRYPT_ROUNDS
 
 
 class RedisService:

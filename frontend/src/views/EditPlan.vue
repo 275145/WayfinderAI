@@ -278,32 +278,31 @@ const versionList = ref<Array<{ version: number; snapshot_at: string; trip_title
 // 拖拽相关状态
 const draggedPos = ref<{ dayIndex: number; attrIndex: number } | null>(null)
 
+const initializeEditablePlan = (plan: TripPlanResponse) => {
+  plan.days.forEach(day => {
+    day.attractions.forEach(attraction => {
+      attraction.notes = attraction.notes || ''
+      attraction.actual_cost = attraction.actual_cost || undefined
+    })
+  })
+}
+
 // 加载行程数据
 onMounted(() => {
   const state = history.state as { tripPlan?: TripPlanResponse }
   if (state?.tripPlan) {
     // 深拷贝避免直接修改原数据
     editablePlan.value = JSON.parse(JSON.stringify(state.tripPlan))
-
-    // 初始化备注和实际花费字段（如果不存在）
-    editablePlan.value.days.forEach(day => {
-      day.attractions.forEach(attraction => {
-        attraction.notes = attraction.notes || ''
-        attraction.actual_cost = attraction.actual_cost || undefined
-      })
-    })
+    if (editablePlan.value) {
+      initializeEditablePlan(editablePlan.value)
+    }
   } else {
     const savedPlan = sessionStorage.getItem('currentTripPlan')
     if (savedPlan) {
       editablePlan.value = JSON.parse(savedPlan)
-
-      // 初始化备注和实际花费字段
-      editablePlan.value.days.forEach(day => {
-        day.attractions.forEach(attraction => {
-          attraction.notes = attraction.notes || ''
-          attraction.actual_cost = attraction.actual_cost || undefined
-        })
-      })
+      if (editablePlan.value) {
+        initializeEditablePlan(editablePlan.value)
+      }
     }
   }
 })
@@ -605,9 +604,9 @@ const saveAndPreview = async () => {
 
   ElMessage.success('保存成功！')
 
+  sessionStorage.setItem('currentTripPlan', JSON.stringify(editablePlan.value))
   router.push({
-    name: 'Result',
-    state: { tripPlan: editablePlan.value }
+    name: 'Result'
   })
 }
 

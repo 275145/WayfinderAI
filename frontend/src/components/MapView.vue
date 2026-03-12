@@ -1,16 +1,16 @@
 <template>
   <div class="map-container">
-    <div id="amap-container" ref="mapContainer"></div>
-    
+    <div ref="mapContainer" class="amap-container"></div>
+
     <div class="map-controls">
       <el-button-group>
         <el-button size="small" @click="fitView">
           <el-icon><FullScreen /></el-icon>
-          适应视野
+          Fit View
         </el-button>
         <el-button size="small" @click="toggleRouteVisible">
           <el-icon><Guide /></el-icon>
-          {{ routeVisible ? '隐藏' : '显示' }}路线
+          {{ routeVisible ? 'Hide' : 'Show' }} Route
         </el-button>
       </el-button-group>
     </div>
@@ -18,13 +18,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue'
-import AMapLoader from '@amap/amap-jsapi-loader'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { FullScreen, Guide } from '@element-plus/icons-vue'
 import type { MapPoint, Location } from '@/types'
 
-// 高德地图 Key - 从环境变量读取
 const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || 'YOUR_AMAP_KEY'
 const AMAP_SECURITY_CODE = import.meta.env.VITE_AMAP_SECURITY_CODE || ''
 
@@ -40,84 +38,58 @@ const map = ref<any>(null)
 const markers = ref<any[]>([])
 const polyline = ref<any>(null)
 const routeVisible = ref(true)
+const amap = ref<any>(null)
 
-// 初始化地图
-const initMap = async () => {
-  try {
-    // 设置安全密钥
-    if (AMAP_SECURITY_CODE) {
-      (window as any)._AMapSecurityConfig = {
-        securityJsCode: AMAP_SECURITY_CODE
-      }
-    }
+let amapLoaderPromise: Promise<any> | null = null
 
-    const AMap = await AMapLoader.load({
-      key: AMAP_KEY,
-      version: '2.0',
-      plugins: [
-        'AMap.Scale', 
-        'AMap.ToolBar', 
-        'AMap.Marker', 
-        'AMap.Polyline', 
-        'AMap.InfoWindow',
-        'AMap.MarkerCluster' // 添加点聚合插件
-      ]
-    })
-
-    const centerLng = props.center?.lng
-    const centerLat = props.center?.lat
-    const isValidCenter = centerLng != null && centerLat != null && !isNaN(Number(centerLng)) && !isNaN(Number(centerLat))
-
-    // 创建地图实例
-    map.value = new AMap.Map(mapContainer.value, {
-      zoom: 12,
-      center: isValidCenter ? [Number(centerLng), Number(centerLat)] : [116.397428, 39.90923],
-      viewMode: '2D',
-      pitch: 0,
-      // 优化地图性能
-      resizeEnable: true,
-      dragEnable: true,
-      zoomEnable: true,
-      doubleClickZoom: true,
-      scrollWheel: true,
-      touchZoom: true,
-      // 添加流畅的动画效果
-      animateEnable: true,
-      jogEnable: true
-    })
-
-    // 添加比例尺和工具条
-    map.value.addControl(new AMap.Scale())
-    map.value.addControl(new AMap.ToolBar())
-
-    // 加载行程点位标记
-    if (props.points && props.points.length > 0) {
-      await nextTick()
-      loadMarkers()
-    }
-  } catch (error: any) {
-    console.error('地图加载失败:', error)
-    if (error?.message) {
-      ElMessage.error(`地图加载失败: ${error.message}`)
-    } else {
-      ElMessage.error('地图加载失败，请检查控制台')
-    }
+const loadAMap = async () => {
+  if (!amapLoaderPromise) {
+    amapLoaderPromise = import('@amap/amap-jsapi-loader').then((mod) =>
+      mod.default.load({
+        key: AMAP_KEY,
+        version: '2.0',
+        plugins: [
+          'AMap.Scale',
+          'AMap.ToolBar',
+          'AMap.Marker',
+          'AMap.Polyline',
+          'AMap.InfoWindow',
+          'AMap.MarkerCluster'
+        ]
+      })
+    )
   }
+
+  return amapLoaderPromise
 }
 
-// 获取活动类型图标
+const pointsSignature = computed(() =>
+  (props.points ?? [])
+    .map((point) => {
+      const lng = point.location?.lng ?? ''
+      const lat = point.location?.lat ?? ''
+      return [point.name, point.type, lng, lat].join(':')
+    })
+    .join('|')
+)
+
+const centerSignature = computed(() => {
+  const lng = props.center?.lng
+  const lat = props.center?.lat
+  return lng != null && lat != null ? `${lng}:${lat}` : ''
+})
+
 const getActivityIcon = (type: string): string => {
   const iconMap: Record<string, string> = {
-    attraction: '🎯',
-    dining: '🍽️',
-    hotel: '🏨',
-    transport: '🚗',
-    other: '📍'
+    attraction: 'A',
+    dining: 'D',
+    hotel: 'H',
+    transport: 'T',
+    other: 'P'
   }
-  return iconMap[type] || '📍'
+  return iconMap[type] || 'P'
 }
 
-// 获取活动类型颜色
 const getActivityColor = (type: string): string => {
   const colorMap: Record<string, string> = {
     attraction: '#4a90e2',
@@ -129,145 +101,45 @@ const getActivityColor = (type: string): string => {
   return colorMap[type] || '#909399'
 }
 
-// 加载标记点
-const loadMarkers = () => {
-  if (!map.value || !props.points) return
+const getActivityTypeText = (type: string): string => {
+  const typeMap: Record<string, string> = {
+    attraction: 'Attraction',
+    dining: 'Dining',
+    hotel: 'Hotel',
+    transport: 'Transport',
+    other: 'Other'
+  }
+  return typeMap[type] || type
+}
 
-  // 清除旧标记
-  clearMarkers()
-
-  const pathPoints: [number, number][] = []
-
-  // 按经纬度分组，避免同一坐标的点相互遮挡
-  const groups = new Map<string, MapPoint[]>()
-
-  props.points.forEach((point) => {
-    if (!point.location) return
-
-    const { lng, lat } = point.location
-
-    if (
-      typeof lng !== 'number' ||
-      typeof lat !== 'number' ||
-      isNaN(lng) ||
-      isNaN(lat) ||
-      lng < -180 || lng > 180 ||
-      lat < -90 || lat > 90
-    ) {
-      console.warn('跳过无效位置的点位:', point.name, { lng, lat })
-      return
-    }
-
-    // 使用固定精度的经纬度字符串作为分组 key，避免浮点误差
-    const key = `${lng.toFixed(6)},${lat.toFixed(6)}`
-    if (!groups.has(key)) {
-      groups.set(key, [])
-    }
-    groups.get(key)!.push(point)
-  })
-
-  let groupIndex = 0
-
-  groups.forEach((groupPoints, key) => {
-    groupIndex++
-
-    const [lngStr, latStr] = key.split(',')
-    const lng = Number(lngStr)
-    const lat = Number(latStr)
-
-    pathPoints.push([lng, lat])
-
-    const firstPoint = groupPoints[0]
-    const activityIcon = getActivityIcon(firstPoint.type)
-    const activityColor = getActivityColor(firstPoint.type)
-
-    const markerContent = `
-      <div class="custom-marker" style="--marker-color: ${activityColor}">
-        <div class="marker-icon-wrapper">
-          <div class="marker-icon">${activityIcon}</div>
-          <div class="marker-number">${groupIndex}</div>
-        </div>
-      </div>
-    `
-
-    const marker = new (window as any).AMap.Marker({
-      position: [lng, lat],
-      content: markerContent,
-      anchor: 'center',
-      offset: new (window as any).AMap.Pixel(0, 0),
-      extData: {
-        index: groupIndex,
-        points: groupPoints
-      }
-    })
-
-    // 构造信息窗口内容：一个坐标下的多个点一起展示
-    const listHtml = groupPoints
-      .map((p, idx) => {
-        return `
-          <li>
-            <strong>${idx + 1}. ${p.name}</strong>
-            <div>类型: ${getActivityTypeText(p.type)}</div>
-            ${p.description ? `<div>${p.description}</div>` : ''}
-            ${p.cost ? `<div>费用: <strong>¥${p.cost}</strong></div>` : ''}
-          </li>
-        `
-      })
-      .join('')
-
-    const infoWindow = new (window as any).AMap.InfoWindow({
-      content: `
-        <div class="info-window">
-          <div class="info-header">
-            <span class="info-icon">${activityIcon}</span>
-            <h4>地点组 ${groupIndex}</h4>
-          </div>
-          <div class="info-body">
-            <ul class="info-list">
-              ${listHtml}
-            </ul>
-          </div>
-        </div>
-      `,
-      offset: new (window as any).AMap.Pixel(0, -10),
-      autoMove: true
-    })
-
-    marker.on('click', () => {
-      map.value.clearInfoWindow()
-      infoWindow.open(map.value, marker.getPosition())
-    })
-
-    marker.on('mouseover', () => {
-      marker.setTop(true)
-    })
-
-    marker.on('mouseout', () => {
-      marker.setTop(false)
-    })
-
-    markers.value.push(marker)
-    map.value.add(marker)
-  })
-
-  // 绘制路线（按地点组连线）
-  if (pathPoints.length > 1 && routeVisible.value) {
-    drawRoute(pathPoints)
+const clearMarkers = () => {
+  if (!map.value) {
+    markers.value = []
+    polyline.value = null
+    return
   }
 
-  // 自动调整视野
-  if (pathPoints.length > 0) {
-    fitView()
+  if (markers.value.length > 0) {
+    map.value.remove(markers.value)
+    markers.value = []
+  }
+
+  if (polyline.value) {
+    map.value.remove(polyline.value)
+    polyline.value = null
   }
 }
 
-// 绘制路线
 const drawRoute = (points: [number, number][]) => {
+  if (!map.value || !amap.value) {
+    return
+  }
+
   if (polyline.value) {
     map.value.remove(polyline.value)
   }
 
-  polyline.value = new (window as any).AMap.Polyline({
+  polyline.value = new amap.value.Polyline({
     path: points,
     strokeColor: '#4a90e2',
     strokeWeight: 5,
@@ -276,85 +148,224 @@ const drawRoute = (points: [number, number][]) => {
     lineCap: 'round',
     showDir: true,
     dirColor: '#fff',
-    // 添加边框使线条更明显
     borderWeight: 1,
     isOutline: true,
     outlineColor: '#fff',
-    // 添加渐变效果
     strokeStyle: 'solid'
   })
 
   map.value.add(polyline.value)
 }
 
-// 清除标记
-const clearMarkers = () => {
-  if (markers.value.length > 0) {
-    map.value.remove(markers.value)
-    markers.value = []
-  }
-  if (polyline.value) {
-    map.value.remove(polyline.value)
-    polyline.value = null
-  }
-}
-
-// 适应视野
 const fitView = () => {
   if (map.value && markers.value.length > 0) {
     map.value.setFitView(markers.value, false, [50, 50, 50, 50], 13)
   }
 }
 
-// 监视中心点变化
-watch(
-  () => props.center,
-  (newCenter) => {
-    if (map.value && newCenter && newCenter.lng != null && newCenter.lat != null) {
-      const centerLng = Number(newCenter.lng)
-      const centerLat = Number(newCenter.lat)
-      if (!isNaN(centerLng) && !isNaN(centerLat)) {
-        map.value.setCenter([centerLng, centerLat])
+const loadMarkers = () => {
+  if (!map.value || !amap.value || !props.points?.length) {
+    clearMarkers()
+    return
+  }
+
+  clearMarkers()
+
+  const pathPoints: [number, number][] = []
+  const groups = new Map<string, MapPoint[]>()
+
+  for (const point of props.points) {
+    if (!point.location) {
+      continue
+    }
+
+    const lng = Number(point.location.lng)
+    const lat = Number(point.location.lat)
+
+    if (
+      Number.isNaN(lng) ||
+      Number.isNaN(lat) ||
+      lng < -180 || lng > 180 ||
+      lat < -90 || lat > 90
+    ) {
+      console.warn('Skipping invalid map point', point.name, { lng, lat })
+      continue
+    }
+
+    const key = `${lng.toFixed(6)},${lat.toFixed(6)}`
+    const group = groups.get(key)
+    if (group) {
+      group.push(point)
+    } else {
+      groups.set(key, [point])
+    }
+  }
+
+  let groupIndex = 0
+
+  for (const [key, groupPoints] of groups.entries()) {
+    groupIndex += 1
+
+    const [lngStr, latStr] = key.split(',')
+    const lng = Number(lngStr)
+    const lat = Number(latStr)
+    pathPoints.push([lng, lat])
+
+    const firstPoint = groupPoints[0]
+    const activityIcon = getActivityIcon(firstPoint.type)
+    const activityColor = getActivityColor(firstPoint.type)
+
+    const marker = new amap.value.Marker({
+      position: [lng, lat],
+      content: `
+        <div class="custom-marker" style="--marker-color: ${activityColor}">
+          <div class="marker-icon-wrapper">
+            <div class="marker-icon">${activityIcon}</div>
+            <div class="marker-number">${groupIndex}</div>
+          </div>
+        </div>
+      `,
+      anchor: 'center',
+      offset: new amap.value.Pixel(0, 0),
+      extData: {
+        index: groupIndex,
+        points: groupPoints
+      }
+    })
+
+    const listHtml = groupPoints
+      .map((point, index) => `
+        <li>
+          <strong>${index + 1}. ${point.name}</strong>
+          <div>Type: ${getActivityTypeText(point.type)}</div>
+          ${point.description ? `<div>${point.description}</div>` : ''}
+          ${point.cost ? `<div>Cost: <strong>${point.cost}</strong></div>` : ''}
+        </li>
+      `)
+      .join('')
+
+    const infoWindow = new amap.value.InfoWindow({
+      content: `
+        <div class="info-window">
+          <div class="info-header">
+            <span class="info-icon">${activityIcon}</span>
+            <h4>Stop ${groupIndex}</h4>
+          </div>
+          <div class="info-body">
+            <ul class="info-list">
+              ${listHtml}
+            </ul>
+          </div>
+        </div>
+      `,
+      offset: new amap.value.Pixel(0, -10),
+      autoMove: true
+    })
+
+    marker.on('click', () => {
+      map.value?.clearInfoWindow()
+      infoWindow.open(map.value, marker.getPosition())
+    })
+
+    marker.on('mouseover', () => marker.setTop(true))
+    marker.on('mouseout', () => marker.setTop(false))
+
+    markers.value.push(marker)
+    map.value.add(marker)
+  }
+
+  if (pathPoints.length > 1 && routeVisible.value) {
+    drawRoute(pathPoints)
+  }
+
+  if (pathPoints.length > 0) {
+    fitView()
+  }
+}
+
+const initMap = async () => {
+  if (!mapContainer.value || map.value) {
+    return
+  }
+
+  try {
+    if (AMAP_SECURITY_CODE) {
+      ;(window as any)._AMapSecurityConfig = {
+        securityJsCode: AMAP_SECURITY_CODE
       }
     }
-  },
-  { deep: true }
-)
 
-// 切换路线显示
+    amap.value = await loadAMap()
+
+    const centerLng = Number(props.center?.lng)
+    const centerLat = Number(props.center?.lat)
+    const hasValidCenter = !Number.isNaN(centerLng) && !Number.isNaN(centerLat)
+
+    map.value = new amap.value.Map(mapContainer.value, {
+      zoom: 12,
+      center: hasValidCenter ? [centerLng, centerLat] : [116.397428, 39.90923],
+      viewMode: '2D',
+      pitch: 0,
+      resizeEnable: true,
+      dragEnable: true,
+      zoomEnable: true,
+      doubleClickZoom: true,
+      scrollWheel: true,
+      touchZoom: true,
+      animateEnable: true,
+      jogEnable: true
+    })
+
+    map.value.addControl(new amap.value.Scale())
+    map.value.addControl(new amap.value.ToolBar())
+    loadMarkers()
+  } catch (error: any) {
+    console.error('Failed to initialize map:', error)
+    ElMessage.error(error?.message ? `Map load failed: ${error.message}` : 'Map load failed')
+  }
+}
+
 const toggleRouteVisible = () => {
   routeVisible.value = !routeVisible.value
-  
-  if (polyline.value) {
-    if (routeVisible.value) {
-      polyline.value.show()
-    } else {
-      polyline.value.hide()
-    }
+
+  if (!polyline.value) {
+    loadMarkers()
+    return
+  }
+
+  if (routeVisible.value) {
+    polyline.value.show()
+  } else {
+    polyline.value.hide()
   }
 }
 
-// 获取活动类型文本
-const getActivityTypeText = (type: string): string => {
-  const typeMap: Record<string, string> = {
-    attraction: '景点',
-    dining: '餐饮',
-    hotel: '酒店',
-    transport: '交通',
-    other: '其他'
-  }
-  return typeMap[type] || type
-}
-
-// 监听点位变化
-watch(() => props.points, () => {
+watch(pointsSignature, () => {
   if (map.value) {
     loadMarkers()
   }
-}, { deep: true })
+})
+
+watch(centerSignature, () => {
+  if (!map.value || !props.center) {
+    return
+  }
+
+  const centerLng = Number(props.center.lng)
+  const centerLat = Number(props.center.lat)
+  if (!Number.isNaN(centerLng) && !Number.isNaN(centerLat)) {
+    map.value.setCenter([centerLng, centerLat])
+  }
+})
 
 onMounted(() => {
   initMap()
+})
+
+onBeforeUnmount(() => {
+  clearMarkers()
+  map.value?.destroy?.()
+  map.value = null
 })
 
 defineExpose({
@@ -375,7 +386,7 @@ defineExpose({
   flex-direction: column;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 
-  #amap-container {
+  .amap-container {
     width: 100%;
     flex: 1;
   }
@@ -388,7 +399,6 @@ defineExpose({
   }
 }
 
-// 自定义标记样式（改进版，更美观）
 :deep(.custom-marker) {
   position: relative;
   width: 48px;
@@ -423,7 +433,7 @@ defineExpose({
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     border: 3px solid #fff;
     position: relative;
-    
+
     &::before {
       content: '';
       position: absolute;
@@ -453,7 +463,6 @@ defineExpose({
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     border: 2px solid #fff;
     z-index: 10;
-    // 不旋转，保持数字正立
     transform: none;
     line-height: 1;
   }
@@ -470,7 +479,6 @@ defineExpose({
   }
 }
 
-// 信息窗口样式
 :deep(.info-window) {
   padding: 0;
   min-width: 240px;
@@ -539,7 +547,6 @@ defineExpose({
   }
 }
 
-// 高德地图信息窗口自定义样式
 :deep(.amap-info-content) {
   padding: 0;
   border-radius: 8px;

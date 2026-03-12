@@ -263,8 +263,17 @@ const originalAvatarUrl = ref('')
 // 临时保存待上传的文件
 const pendingAvatarFile = ref<File | null>(null)
 
+interface ProfileFormData {
+  username: string
+  phone: string
+  gender: 'male' | 'female' | 'other'
+  birthday: string
+  bio: string
+  travel_preferences: string[]
+}
+
 // 表单数据
-const formData = reactive({
+const formData = reactive<ProfileFormData>({
   username: '',
   phone: '',
   gender: 'other',

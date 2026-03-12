@@ -418,9 +418,9 @@ const handleSubmit = async () => {
               sessionStorage.setItem('currentTripPlan', JSON.stringify(result))
             }
             ElMessage.success('行程规划成功！')
+            sessionStorage.setItem('currentTripPlan', JSON.stringify(result))
             router.push({
-              name: 'Result',
-              state: { tripPlan: result }
+              name: 'Result'
             })
           }, 400)
           return
