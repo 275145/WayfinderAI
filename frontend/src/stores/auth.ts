@@ -1,92 +1,106 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { User, AuthState } from '@/types'
+import type { User } from '@/types'
 import { authApi } from '@/services/api'
+import { getTokenExpiryMs, isTokenExpired } from '@/utils/auth'
 
-/**
- * 认证状态管理
- * 使用Pinia进行状态管理，支持localStorage持久化
- */
 export const useAuthStore = defineStore('auth', () => {
-  // 状态
   const token = ref<string | null>(null)
   const user = ref<User | null>(null)
+  const expiresAt = ref<number | null>(null)
+  let expiryTimer: number | null = null
 
-  // 计算属性
-  const isAuthenticated = computed(() => !!token.value && !!user.value)
+  const isAuthenticated = computed(() => {
+    return !!token.value && !!user.value && !!expiresAt.value && expiresAt.value > Date.now()
+  })
   const userId = computed(() => user.value?.user_id || null)
   const username = computed(() => user.value?.username || '')
 
-  /**
-   * 设置认证信息
-   * @param accessToken JWT访问令牌
-   * @param userInfo 用户信息
-   */
-  const setAuth = (accessToken: string, userInfo: User) => {
-    token.value = accessToken
-    user.value = userInfo
-    
-    // 保存到localStorage
-    localStorage.setItem('access_token', accessToken)
-    localStorage.setItem('user_info', JSON.stringify(userInfo))
-    // 登录后清理访客会话标识，避免歧义
+  const stopExpiryTimer = () => {
+    if (expiryTimer !== null) {
+      window.clearTimeout(expiryTimer)
+      expiryTimer = null
+    }
+  }
+
+  const clearPersistedAuth = () => {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('user_info')
+  }
+
+  const clearAuth = () => {
+    stopExpiryTimer()
+    token.value = null
+    user.value = null
+    expiresAt.value = null
+    clearPersistedAuth()
     localStorage.removeItem('guest_session_id')
   }
 
-  /**
-   * 退出登录
-   */
+  const scheduleExpiryTimer = (accessToken: string | null) => {
+    stopExpiryTimer()
+    expiresAt.value = getTokenExpiryMs(accessToken)
+
+    if (!accessToken || !expiresAt.value) {
+      return
+    }
+
+    const remainingMs = expiresAt.value - Date.now()
+    if (remainingMs <= 0) {
+      clearAuth()
+      return
+    }
+
+    expiryTimer = window.setTimeout(() => {
+      clearAuth()
+    }, remainingMs)
+  }
+
+  const setAuth = (accessToken: string, userInfo: User) => {
+    if (isTokenExpired(accessToken)) {
+      clearAuth()
+      return
+    }
+
+    token.value = accessToken
+    user.value = userInfo
+    localStorage.setItem('access_token', accessToken)
+    localStorage.setItem('user_info', JSON.stringify(userInfo))
+    localStorage.removeItem('guest_session_id')
+    scheduleExpiryTimer(accessToken)
+  }
+
   const logout = async () => {
     try {
-      // 调用后端logout API（如果需要记录退出日志等）
-      // 即使API调用失败，也要清除本地认证信息
       try {
         await authApi.logout()
       } catch (apiError) {
-        console.error('后端logout API调用失败:', apiError)
-        // 不抛出错误，继续清除本地认证信息
+        console.error('Backend logout API failed:', apiError)
       }
     } finally {
-      // 无论如何都要清除本地认证信息
       clearAuth()
     }
   }
 
-  /**
-   * 清除认证信息
-   */
-  const clearAuth = () => {
-    token.value = null
-    user.value = null
-    
-    // 清除localStorage
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('user_info')
-    localStorage.removeItem('guest_session_id')
-  }
-
-  /**
-   * 从localStorage恢复认证状态
-   */
   const restoreAuth = () => {
     try {
       const savedToken = localStorage.getItem('access_token')
       const savedUserInfo = localStorage.getItem('user_info')
-      
-      if (savedToken && savedUserInfo) {
-        token.value = savedToken
-        user.value = JSON.parse(savedUserInfo)
+
+      if (!savedToken || !savedUserInfo || isTokenExpired(savedToken)) {
+        clearAuth()
+        return
       }
+
+      token.value = savedToken
+      user.value = JSON.parse(savedUserInfo)
+      scheduleExpiryTimer(savedToken)
     } catch (error) {
-      console.error('恢复认证状态失败:', error)
+      console.error('Failed to restore auth state:', error)
       clearAuth()
     }
   }
 
-  /**
-   * 更新用户信息
-   * @param updatedUser 更新后的用户信息
-   */
   const updateUser = (updatedUser: Partial<User>) => {
     if (user.value) {
       user.value = { ...user.value, ...updatedUser }
@@ -94,24 +108,19 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 初始化时恢复认证状态
   restoreAuth()
 
   return {
-    // 状态
     token,
     user,
-    
-    // 计算属性
+    expiresAt,
     isAuthenticated,
     userId,
     username,
-    
-    // 方法
     setAuth,
     logout,
     clearAuth,
     restoreAuth,
-    updateUser
+    updateUser,
   }
 })

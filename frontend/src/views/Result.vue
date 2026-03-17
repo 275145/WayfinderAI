@@ -315,11 +315,13 @@ import {
 } from '@element-plus/icons-vue'
 import BudgetSummary from '@/components/BudgetSummary.vue'
 import type { TripPlanResponse, MapPoint, Location as LocationType } from '@/types'
+import { useTripStore } from '@/stores/trip'
 
 const MapView = defineAsyncComponent(() => import('@/components/MapView.vue'))
 const ExportButtons = defineAsyncComponent(() => import('@/components/ExportButtons.vue'))
 
 const router = useRouter()
+const tripStore = useTripStore()
 const contentRef = ref<HTMLElement>()
 const tripPlan = ref<TripPlanResponse | null>(null)
 
@@ -461,10 +463,13 @@ const goBack = () => {
 // 编辑行程
 const goEdit = () => {
   if (tripPlan.value) {
-    sessionStorage.setItem('currentTripPlan', JSON.stringify(tripPlan.value))
+    tripStore.startEditing(tripPlan.value, 'result')
   }
   router.push({ 
-    name: 'EditPlan'
+    name: 'EditPlan',
+    query: {
+      returnTo: 'result'
+    }
   })
 }
 </script>

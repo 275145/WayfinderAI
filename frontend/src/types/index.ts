@@ -104,6 +104,13 @@ export interface TripPlanResponse {
   days: DailyPlan[]
 }
 
+export type EditReturnTarget = 'result' | 'my-trips'
+
+export type TripListItem = TripPlanResponse & {
+  id: string
+  created_at: string
+}
+
 // 表单数据类型
 export interface TripFormData {
   destination: string
