@@ -174,7 +174,8 @@ class TripService:
 
     def list_city_support(self) -> CityListResponse:
         cities = city_support_service.list_cities()
-        return CityListResponse(count=len(cities), cities=cities)
+        city_names = list(cities.keys()) if isinstance(cities, dict) else list(cities)
+        return CityListResponse(count=len(city_names), cities=city_names)
 
     def _validate_request(self, request: TripPlanRequest) -> None:
         if not request.destination or not request.destination.strip():
@@ -223,7 +224,7 @@ class TripService:
                 "budget": request.budget,
             },
         )
-        vector_memory_service.save()
+        vector_memory_service.schedule_save()
 
         trip_id = str(uuid.uuid4())
         now = datetime.now().isoformat()

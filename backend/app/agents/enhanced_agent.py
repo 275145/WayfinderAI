@@ -211,6 +211,9 @@ class EnhancedAgent(SimpleAgent):
         
         # 添加当前用户消息
         messages.append({"role": "user", "content": input_text})
+
+        if self.context_manager and "usage_key" not in kwargs:
+            kwargs["usage_key"] = self.context_manager.request_id
         
         # 如果没有启用工具调用，使用简单对话逻辑
         if not self.enable_tool_calling:
@@ -469,8 +472,8 @@ class EnhancedAgent(SimpleAgent):
                 memory_data
             )
         
-        # 保存向量索引
-        self.memory_service.save()
+        # 延迟落盘，避免阻塞主请求链路
+        self.memory_service.schedule_save()
     
     def add_tool(self, tool) -> None:
         """添加工具到Agent（便利方法）"""

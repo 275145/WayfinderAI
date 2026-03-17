@@ -317,6 +317,7 @@ class PlannerAgent:
         """
         # 获取请求ID
         request_id = get_request_id() or f"req_{datetime.now().timestamp()}"
+        self.llm.reset_usage_stats(request_id)
         
         # 创建或获取上下文管理器
         context_manager = get_context_manager(request_id)
@@ -538,6 +539,16 @@ class PlannerAgent:
                 }
             )
             
+            llm_usage = self.llm.get_usage_stats(request_id)
+            context_manager.share_data("llm_usage", llm_usage, from_agent="planner")
+            logger.info(
+                "Trip planning LLM usage summary",
+                extra={
+                    "request_id": request_id,
+                    "destination": request.destination,
+                    "llm_usage": llm_usage,
+                },
+            )
             logger.info(f"成功生成并验证了行程计划: {validated_plan.trip_title}")
             
             # 清理上下文管理器（可选，也可以保留用于后续查询）

@@ -1,10 +1,22 @@
 import os
+import threading
+from typing import Iterator, Literal, Optional
+
 from openai import OpenAI
-from typing import Literal
+
 from ..config import settings
 from ..observability.logger import default_logger as logger
-from typing import Literal, Optional, Iterator
+
 Provider = Literal["openai", "zhipu", "modelscope", "ollama", "vllm", "custom"]
+
+
+def _empty_usage_stats() -> dict[str, int]:
+    return {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "request_count": 0,
+    }
 
 class LLMService:
     """
@@ -29,6 +41,8 @@ class LLMService:
         self.max_tokens = max_tokens
         self.timeout = timeout or int(os.getenv("LLM_TIMEOUT", "60"))
         self.kwargs = kwargs
+        self._usage_lock = threading.Lock()
+        self._usage_by_key: dict[str, dict[str, int]] = {}
         # 核心逻辑：自动检测和解析凭证
         self._auto_detect_provider()
         self._resolve_credentials()
@@ -91,6 +105,34 @@ class LLMService:
         # 3. 解析模型ID
         self.model = settings.LLM_MODEL_ID or "gpt-4-turbo" # 提供一个默认值
 
+    def reset_usage_stats(self, usage_key: str) -> None:
+        with self._usage_lock:
+            self._usage_by_key[usage_key] = _empty_usage_stats()
+
+    def get_usage_stats(self, usage_key: str) -> dict[str, int]:
+        with self._usage_lock:
+            stats = self._usage_by_key.get(usage_key, _empty_usage_stats())
+            return dict(stats)
+
+    def _record_usage(self, response, usage_key: Optional[str]) -> None:
+        if not usage_key:
+            return
+
+        usage = getattr(response, "usage", None)
+        if not usage:
+            return
+
+        prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+        completion_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+        total_tokens = int(getattr(usage, "total_tokens", 0) or 0)
+
+        with self._usage_lock:
+            current = self._usage_by_key.setdefault(usage_key, _empty_usage_stats())
+            current["prompt_tokens"] += prompt_tokens
+            current["completion_tokens"] += completion_tokens
+            current["total_tokens"] += total_tokens
+            current["request_count"] += 1
+
     def generate_json_plan(self, prompt: str) -> str:
         """
         调用LLM生成JSON格式的行程计划。此方法保持接口不变。
@@ -101,6 +143,7 @@ class LLMService:
 
         logger.info(f"向LLM ({self.provider}) 发起行程规划请求...")
         try:
+            usage_key = self.kwargs.get("usage_key")
             response = self.client.chat.completions.create(
                 model=self.model, # 使用解析后的模型
                 messages=[
@@ -109,6 +152,7 @@ class LLMService:
                 ],
                 response_format={"type": "json_object"}
             )
+            self._record_usage(response, usage_key)
             json_output = response.choices[0].message.content
             logger.info("成功从LLM获取到行程规划JSON数据。")
             return json_output or ""
@@ -129,6 +173,7 @@ class LLMService:
         """
         print(f"🧠 正在调用 {self.model} 模型...")
         try:
+            usage_key = kwargs.pop('usage_key', None)
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -163,6 +208,7 @@ class LLMService:
                 max_tokens=kwargs.get('max_tokens', self.max_tokens),
                 **{k: v for k, v in kwargs.items() if k not in ['temperature', 'max_tokens']}
             )
+            self._record_usage(response, usage_key)
             return response.choices[0].message.content
         except Exception as e:
             raise Exception(f"LLM调用失败: {str(e)}")

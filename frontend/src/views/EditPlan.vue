@@ -261,14 +261,17 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Location, Rank, Delete, RefreshRight } from '@element-plus/icons-vue'
+import { Plus, Location, Rank, Delete } from '@element-plus/icons-vue'
 import MapView from '@/components/MapView.vue'
-import type { TripPlanResponse, DailyPlan, Attraction, Dining, Hotel, MapPoint } from '@/types'
+import type { EditReturnTarget, TripPlanResponse, DailyPlan, Attraction, Dining, MapPoint } from '@/types'
 import { tripApi } from '@/services/api'
+import { useTripStore } from '@/stores/trip'
 
 const router = useRouter()
+const route = useRoute()
+const tripStore = useTripStore()
 const editablePlan = ref<TripPlanResponse | null>(null)
 const activeDay = ref(0)
 const versionDialogVisible = ref(false)
@@ -289,20 +292,12 @@ const initializeEditablePlan = (plan: TripPlanResponse) => {
 
 // 加载行程数据
 onMounted(() => {
-  const state = history.state as { tripPlan?: TripPlanResponse }
-  if (state?.tripPlan) {
+  const currentTrip = tripStore.hydrateCurrentTrip()
+  if (currentTrip) {
     // 深拷贝避免直接修改原数据
-    editablePlan.value = JSON.parse(JSON.stringify(state.tripPlan))
+    editablePlan.value = JSON.parse(JSON.stringify(currentTrip))
     if (editablePlan.value) {
       initializeEditablePlan(editablePlan.value)
-    }
-  } else {
-    const savedPlan = sessionStorage.getItem('currentTripPlan')
-    if (savedPlan) {
-      editablePlan.value = JSON.parse(savedPlan)
-      if (editablePlan.value) {
-        initializeEditablePlan(editablePlan.value)
-      }
     }
   }
 })
@@ -380,23 +375,6 @@ const totalBudget = computed(() => {
   return daysTotal
 })
 
-// 计算实际花费
-const actualTotal = computed(() => {
-  if (!editablePlan.value) return 0
-
-  return editablePlan.value.days.reduce((sum, day) => {
-    const attractionsCost = day.attractions.reduce((attrSum, attraction) => {
-      return attrSum + (attraction.actual_cost || 0)
-    }, 0)
-
-    const diningsCost = day.dinings.reduce((diningSum, dining) => {
-      return diningSum + (typeof dining.cost_per_person === 'number' ? dining.cost_per_person : 0)
-    }, 0)
-
-    return sum + attractionsCost + diningsCost
-  }, 0)
-})
-
 // 添加一天
 const addDay = () => {
   if (!editablePlan.value) return
@@ -457,11 +435,6 @@ const removeAttraction = (dayIndex: number, attrIndex: number) => {
 
   editablePlan.value.days[dayIndex].attractions.splice(attrIndex, 1)
   ElMessage.success('已删除该景点')
-}
-
-// 替换景点（打开对话框）
-const replaceAttraction = (dayIndex: number, attrIndex: number) => {
-  ElMessage.info('替换功能开发中，请先删除再添加')
 }
 
 // 拖拽开始
@@ -531,32 +504,23 @@ const removeDining = (dayIndex: number, dineIndex: number) => {
   ElMessage.success('已删除该餐厅')
 }
 
-// 添加酒店
-const addHotel = () => {
-  if (!editablePlan.value) return
-
-  const newHotel: Hotel = {
-    name: '新酒店',
-    address: '',
-    price: 0,
-    rating: 'N/A'
-  }
-
-  editablePlan.value.hotels.push(newHotel)
-  ElMessage.success('已添加新酒店')
-}
-
-// 删除酒店
-const removeHotel = (index: number) => {
-  if (!editablePlan.value) return
-
-  editablePlan.value.hotels.splice(index, 1)
-  ElMessage.success('已删除该酒店')
-}
-
 // 返回
 const goBack = () => {
-  router.back()
+  const returnTo = (
+    typeof route.query.returnTo === 'string' ? route.query.returnTo : tripStore.hydrateEditReturnTo()
+  ) as EditReturnTarget
+
+  if (returnTo === 'my-trips') {
+    window.location.assign('/my-trips')
+    return
+  }
+
+  if (editablePlan.value) {
+    router.push({ name: 'Result' })
+    return
+  }
+
+  window.location.assign('/')
 }
 
 // 保存并预览
@@ -588,23 +552,9 @@ const saveAndPreview = async () => {
     ElMessage.warning(error?.message || '后端保存失败，已保存到本地预览')
   }
 
-  sessionStorage.setItem('currentTripPlan', JSON.stringify(editablePlan.value))
-
-  // 同步更新本地行程列表缓存
-  try {
-    const savedTrips = JSON.parse(localStorage.getItem('myTrips') || '[]')
-    const idx = savedTrips.findIndex((t: any) => t.id === editablePlan.value?.id)
-    if (idx >= 0) {
-      savedTrips[idx] = editablePlan.value
-      localStorage.setItem('myTrips', JSON.stringify(savedTrips))
-    }
-  } catch {
-    // 忽略本地缓存更新异常
-  }
-
+  tripStore.setCurrentTrip(editablePlan.value)
+  tripStore.upsertTrip(editablePlan.value)
   ElMessage.success('保存成功！')
-
-  sessionStorage.setItem('currentTripPlan', JSON.stringify(editablePlan.value))
   router.push({
     name: 'Result'
   })
@@ -629,7 +579,8 @@ const rollbackTo = async (version: number) => {
   try {
     const rolled = await tripApi.rollbackTrip(editablePlan.value.id, version)
     editablePlan.value = rolled
-    sessionStorage.setItem('currentTripPlan', JSON.stringify(rolled))
+    tripStore.setCurrentTrip(rolled)
+    tripStore.upsertTrip(rolled)
     ElMessage.success(`已回滚到版本 ${version}`)
     versionDialogVisible.value = false
   } catch (error: any) {

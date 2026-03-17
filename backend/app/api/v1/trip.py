@@ -53,14 +53,14 @@ def get_trip_list(
     return trip_service.list_trips(user_id=get_user_id(http_request))
 
 
+@router.get("/city-support", response_model=CityListResponse)
+def list_city_support(trip_service: TripService = Depends(get_trip_service)):
+    return trip_service.list_city_support()
+
+
 @router.get("/city-support/{city}", response_model=CitySupportResponse)
 def get_city_support(city: str, trip_service: TripService = Depends(get_trip_service)):
     return trip_service.get_city_support(city)
-
-
-@router.get("/cities", response_model=CityListResponse)
-def list_city_support(trip_service: TripService = Depends(get_trip_service)):
-    return trip_service.list_city_support()
 
 
 @router.get("/{trip_id}", response_model=TripPlanResponse)

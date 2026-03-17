@@ -4,13 +4,15 @@
 """
 import json
 import os
-import numpy as np
 import threading
-from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 from pathlib import Path
-from sentence_transformers import SentenceTransformer
+from typing import Any, Dict, List, Optional
+
 import faiss
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
 from app.observability.logger import default_logger as logger
 from app.config import settings
 
@@ -62,6 +64,10 @@ class VectorMemoryService:
         self.memory_dir = Path(memory_dir)
         self.memory_dir.mkdir(parents=True, exist_ok=True)
         self.vector_dim = vector_dim
+        self._save_lock = threading.Lock()
+        self._save_timer: Optional[threading.Timer] = None
+        self._pending_save = False
+        self._save_delay_seconds = 2.0
         
         # 使用配置中的模型名称（如果没有提供）
         if model_name is None:
@@ -73,15 +79,6 @@ class VectorMemoryService:
         
         # 初始化嵌入模型
         self.embedding_model = self._load_embedding_model(model_name)
-        
-        # 初始化FAISS索引
-        self.user_memory_index = None
-        self.knowledge_memory_index = None
-        self.user_metadata = {}  # 存储用户记忆的元数据
-        self.knowledge_metadata = {}  # 存储知识记忆的元数据
-        
-        # 加载或创建索引
-        self._load_or_create_indexes()
         
         # 初始化FAISS索引
         self.user_memory_index = None
@@ -236,6 +233,28 @@ class VectorMemoryService:
             logger.info("向量索引保存成功")
         except Exception as e:
             logger.error(f"保存向量索引失败: {e}")
+
+    def schedule_save(self, delay_seconds: Optional[float] = None) -> None:
+        """Debounce vector index persistence to keep request paths responsive."""
+        delay = self._save_delay_seconds if delay_seconds is None else delay_seconds
+
+        with self._save_lock:
+            self._pending_save = True
+            if self._save_timer:
+                self._save_timer.cancel()
+
+            self._save_timer = threading.Timer(delay, self._flush_scheduled_save)
+            self._save_timer.daemon = True
+            self._save_timer.start()
+
+    def _flush_scheduled_save(self) -> None:
+        with self._save_lock:
+            self._save_timer = None
+            if not self._pending_save:
+                return
+            self._pending_save = False
+
+        self._save_indexes()
     
     def _text_to_vector(self, text: str) -> np.ndarray:
         """将文本转换为向量"""
@@ -738,6 +757,11 @@ class VectorMemoryService:
     
     def save(self):
         """保存索引和元数据"""
+        with self._save_lock:
+            if self._save_timer:
+                self._save_timer.cancel()
+                self._save_timer = None
+            self._pending_save = False
         self._save_indexes()
     
     def get_stats(self) -> Dict[str, Any]:

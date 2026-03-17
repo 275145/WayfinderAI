@@ -2,19 +2,59 @@
 健壮的日志系统
 提供结构化日志、请求ID追踪、日志轮转等功能
 """
+import json
 import logging
 import logging.handlers
-import json
 import os
 import sys
-from datetime import datetime
-from typing import Any, Dict, Optional
-from pathlib import Path
 import traceback
 from contextvars import ContextVar
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 # 请求ID上下文变量
 request_id_var: ContextVar[Optional[str]] = ContextVar('request_id', default=None)
+
+STANDARD_LOG_RECORD_FIELDS = {
+    "args",
+    "asctime",
+    "created",
+    "exc_info",
+    "exc_text",
+    "filename",
+    "funcName",
+    "levelname",
+    "levelno",
+    "lineno",
+    "module",
+    "msecs",
+    "message",
+    "msg",
+    "name",
+    "pathname",
+    "process",
+    "processName",
+    "relativeCreated",
+    "stack_info",
+    "thread",
+    "threadName",
+}
+
+
+def _extract_log_context(record: logging.LogRecord) -> Dict[str, Any]:
+    context: Dict[str, Any] = {}
+
+    extra_context = getattr(record, "extra_context", None)
+    if isinstance(extra_context, dict):
+        context.update(extra_context)
+
+    for key, value in record.__dict__.items():
+        if key in STANDARD_LOG_RECORD_FIELDS or key == "extra_context":
+            continue
+        context[key] = value
+
+    return context
 
 
 class StructuredFormatter(logging.Formatter):
@@ -53,9 +93,9 @@ class StructuredFormatter(logging.Formatter):
                 "traceback": traceback.format_exception(*record.exc_info) if record.exc_info else None
             }
         
-        # 添加额外的上下文信息
-        if hasattr(record, 'extra_context'):
-            log_data["context"] = record.extra_context
+        context = _extract_log_context(record)
+        if context:
+            log_data["context"] = context
         
         # 添加线程和进程信息
         log_data["thread"] = record.thread
@@ -97,9 +137,9 @@ class HumanReadableFormatter(logging.Formatter):
         if record.exc_info:
             log_line += f"\n{self.formatException(record.exc_info)}"
         
-        # 添加额外上下文
-        if hasattr(record, 'extra_context'):
-            context_str = json.dumps(record.extra_context, ensure_ascii=False, indent=2)
+        context = _extract_log_context(record)
+        if context:
+            context_str = json.dumps(context, ensure_ascii=False, indent=2)
             log_line += f"\n上下文信息:\n{context_str}"
         
         return log_line
@@ -131,6 +171,7 @@ def setup_logger(
     """
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, log_level.upper(), logging.INFO))
+    logger.propagate = False
     
     # 避免重复添加处理器
     if logger.handlers:

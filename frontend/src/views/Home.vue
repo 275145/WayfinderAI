@@ -39,20 +39,26 @@
           <!-- 目的地 -->
           <el-col :span="12">
             <el-form-item label="目的地" prop="destination">
-              <el-input
+              <el-select
                 v-model="formData.destination"
-                placeholder="请输入您想去的城市，例如：北京"
+                placeholder="请选择您想去的城市"
                 clearable
+                filterable
+                default-first-option
                 size="large"
-                @blur="checkCitySupport"
+                style="width: 100%"
+                :loading="cityOptionsLoading"
               >
                 <template #prefix>
                   <el-icon><Location /></el-icon>
                 </template>
-              </el-input>
-              <div v-if="citySupport" class="city-support-hint" :class="`level-${citySupport.level}`">
-                <strong>城市支持：{{ citySupport.level }}</strong> - {{ citySupport.message }}
-              </div>
+                <el-option
+                  v-for="city in cityOptions"
+                  :key="city"
+                  :label="city"
+                  :value="city"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
 
@@ -204,7 +210,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Location, Search } from '@element-plus/icons-vue'
@@ -213,9 +219,11 @@ import LoadingProgress from '@/components/LoadingProgress.vue'
 import type { TripFormData, TripPlanRequest } from '@/types'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import { useTripStore } from '@/stores/trip'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const tripStore = useTripStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 const loadingProgressVisible = ref(false)
@@ -226,7 +234,8 @@ const taskTitle = ref<string | undefined>(undefined)
 const taskDescription = ref<string | undefined>(undefined)
 const taskStep = ref<number | undefined>(undefined)
 const currentTaskId = ref<string | null>(null)
-const citySupport = ref<{ city: string; level: string; message: string } | null>(null)
+const cityOptions = ref<string[]>([])
+const cityOptionsLoading = ref(false)
 
 // 表单数据
 const formData = reactive<TripFormData>({
@@ -240,7 +249,7 @@ const formData = reactive<TripFormData>({
 // 表单验证规则
 const rules: FormRules = {
   destination: [
-    { required: true, message: '请输入目的地', trigger: 'blur' }
+    { required: true, message: '请选择目的地', trigger: 'change' }
   ],
   dateRange: [
     { required: true, message: '请选择出行日期', trigger: 'change' }
@@ -310,7 +319,6 @@ const fillExample = (example: any) => {
   ]
   
   ElMessage.success('已填充示例数据，您可以直接开始规划！')
-  checkCitySupport()
 }
 
 const mapTaskToStep = (progress: number) => {
@@ -320,16 +328,15 @@ const mapTaskToStep = (progress: number) => {
   return 3
 }
 
-const checkCitySupport = async () => {
-  const city = formData.destination?.trim()
-  if (!city) {
-    citySupport.value = null
-    return
-  }
+const loadCityOptions = async () => {
+  cityOptionsLoading.value = true
   try {
-    citySupport.value = await tripApi.getCitySupport(city)
+    const response = await tripApi.listCitySupport()
+    cityOptions.value = response.cities || []
   } catch {
-    citySupport.value = null
+    cityOptions.value = []
+  } finally {
+    cityOptionsLoading.value = false
   }
 }
 
@@ -400,25 +407,10 @@ const handleSubmit = async () => {
             loading.value = false
             loadingProgressVisible.value = false
             currentTaskId.value = null
-            try {
-              const savedTrips = JSON.parse(localStorage.getItem('myTrips') || '[]')
-              const newTrip = {
-                ...result,
-                id: result.id || Date.now().toString(),
-                created_at: result.created_at || new Date().toISOString()
-              }
-              savedTrips.unshift(newTrip)
-              if (savedTrips.length > 100) {
-                savedTrips.pop()
-              }
-              localStorage.setItem('myTrips', JSON.stringify(savedTrips))
-              sessionStorage.setItem('currentTripPlan', JSON.stringify(newTrip))
-            } catch (error) {
-              console.error('保存行程失败:', error)
-              sessionStorage.setItem('currentTripPlan', JSON.stringify(result))
-            }
-            ElMessage.success('行程规划成功！')
-            sessionStorage.setItem('currentTripPlan', JSON.stringify(result))
+            const currentTrip = tripStore.upsertTrip(result)
+            tripStore.setCurrentTrip(currentTrip)
+            tripStore.setEditReturnTo('result')
+            ElMessage.success('行程规划成功')
             router.push({
               name: 'Result'
             })
@@ -478,6 +470,10 @@ const handleCancelRequest = () => {
   // 表单数据会自动保留（因为是reactive的）
   ElMessage.info('已取消请求，您的表单信息已保留')
 }
+
+onMounted(() => {
+  loadCityOptions()
+})
 </script>
 
 <style scoped lang="scss">
@@ -662,32 +658,6 @@ const handleCancelRequest = () => {
       }
     }
 
-    .city-support-hint {
-      margin-top: 8px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      font-size: 12px;
-      line-height: 1.4;
-      border: 1px solid transparent;
-
-      &.level-supported {
-        background: #ecfdf3;
-        border-color: #86efac;
-        color: #166534;
-      }
-
-      &.level-beta {
-        background: #fff7ed;
-        border-color: #fdba74;
-        color: #9a3412;
-      }
-
-      &.level-unsupported {
-        background: #fef2f2;
-        border-color: #fca5a5;
-        color: #991b1b;
-      }
-    }
   }
 
   // 示例区域

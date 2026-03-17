@@ -167,6 +167,8 @@ class AuthService:
         )
 
     async def upload_avatar(self, current_user: Dict[str, Any], file: UploadFile) -> AvatarUploadResponse:
+        self._ensure_registered_user(current_user)
+
         if not file.content_type or not file.content_type.startswith("image/"):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only image files are allowed")
 
