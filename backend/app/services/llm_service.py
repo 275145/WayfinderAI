@@ -173,7 +173,6 @@ class LLMService:
         """
         print(f"🧠 正在调用 {self.model} 模型...")
         try:
-            usage_key = kwargs.pop('usage_key', None)
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -201,12 +200,15 @@ class LLMService:
         适用于不需要流式输出的场景。
         """
         try:
+            usage_key = kwargs.pop('usage_key', None)
+            temperature = kwargs.pop('temperature', self.temperature)
+            max_tokens = kwargs.pop('max_tokens', self.max_tokens)
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                temperature=kwargs.get('temperature', self.temperature),
-                max_tokens=kwargs.get('max_tokens', self.max_tokens),
-                **{k: v for k, v in kwargs.items() if k not in ['temperature', 'max_tokens']}
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **kwargs
             )
             self._record_usage(response, usage_key)
             return response.choices[0].message.content

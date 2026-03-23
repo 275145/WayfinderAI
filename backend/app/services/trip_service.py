@@ -35,10 +35,15 @@ class TripService:
         planner_agent: Optional[PlannerAgent] = None,
     ) -> None:
         self.redis_service = redis_service
-        self.planner_agent = planner_agent or PlannerAgent(
-            llm_service=LLMService,
-            memory_service=vector_memory_service,
-        )
+        self.planner_agent = planner_agent
+
+    def _get_planner_agent(self) -> PlannerAgent:
+        if self.planner_agent is None:
+            self.planner_agent = PlannerAgent(
+                llm_service=LLMService,
+                memory_service=vector_memory_service,
+            )
+        return self.planner_agent
 
     def plan_trip(self, request: TripPlanRequest, user_id: str) -> TripPlanResponse:
         self._validate_request(request)
@@ -196,7 +201,7 @@ class TripService:
         city_info: Optional[Dict[str, Any]] = None,
     ) -> TripPlanResponse:
         city_info = city_info or city_support_service.get_city_support_info(request.destination)
-        final_plan = self.planner_agent.plan_trip(request=request, user_id=user_id)
+        final_plan = self._get_planner_agent().plan_trip(request=request, user_id=user_id)
         if not final_plan:
             raise BusinessException(
                 ErrorCode.TRIP_PLAN_FAILED,

@@ -13,6 +13,7 @@ from app.models.trip_model import (
     TripTaskResponse,
     TripVersionsResponse,
 )
+from app.services.city_service import city_support_service
 from app.services.trip_service import TripService
 
 router = APIRouter()
@@ -54,13 +55,20 @@ def get_trip_list(
 
 
 @router.get("/city-support", response_model=CityListResponse)
-def list_city_support(trip_service: TripService = Depends(get_trip_service)):
-    return trip_service.list_city_support()
+def list_city_support():
+    cities = city_support_service.list_cities()
+    city_names = list(cities.keys()) if isinstance(cities, dict) else list(cities)
+    return CityListResponse(count=len(city_names), cities=city_names)
 
 
 @router.get("/city-support/{city}", response_model=CitySupportResponse)
-def get_city_support(city: str, trip_service: TripService = Depends(get_trip_service)):
-    return trip_service.get_city_support(city)
+def get_city_support(city: str):
+    support = city_support_service.get_city_support_info(city)
+    return CitySupportResponse(
+        city=city,
+        level=support.get("level", "unknown"),
+        message=support.get("message", ""),
+    )
 
 
 @router.get("/{trip_id}", response_model=TripPlanResponse)

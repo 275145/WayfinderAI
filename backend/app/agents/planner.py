@@ -1,6 +1,5 @@
 import json
 import math
-import asyncio
 from datetime import datetime
 from app.models.trip_model import TripPlanRequest, TripPlanResponse
 from app.models.common_model import Attraction, Hotel, Weather
@@ -465,67 +464,30 @@ class PlannerAgent:
             # 6. 验证和过滤地理位置
             validated_plan = self._validate_and_filter_plan(validated_plan, request.destination)
             
-            # 7. 为景点添加图片（批量异步搜索 - 性能优化）
-            logger.info("🚀 开始批量异步搜索景点图片...")
-            
-            # 收集所有景点和对应的搜索关键词
-            attractions_to_search = []
-            for day in validated_plan.days:
-                for attraction in day.attractions:
-                    # 构造搜索关键词：优先用"景点名 + 城市"
-                    search_query = f"{attraction.name} {request.destination}"
-                    attractions_to_search.append({
-                        'attraction': attraction,
-                        'query': search_query
-                    })
-            
-            logger.info(f"📸 需要为 {len(attractions_to_search)} 个景点搜索图片")
-            
-            # 批量异步获取图片URL
-            if attractions_to_search:
-                # 提取所有查询关键词
-                queries = [item['query'] for item in attractions_to_search]
-                
-                # 使用异步批量搜索
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
+            # 7. Enrich attraction images after validation.
+            logger.info("Starting attraction image enrichment")
+            attractions = [attraction for day in validated_plan.days for attraction in day.attractions]
+            if attractions:
                 try:
-                    image_urls = loop.run_until_complete(
-                        self.unsplash_service.fetch_images_batch(
-                            queries=queries,
-                            use_fallback=True,  # 失败时使用占位图
-                            use_cache=True  # 使用缓存
-                        )
+                    image_stats = self.unsplash_service.enrich_attractions(
+                        attractions=attractions,
+                        destination=request.destination,
+                        use_fallback=True,
+                        use_cache=True,
                     )
-                    
-                    # 将结果分配给对应的景点
-                    success_count = 0
-                    fallback_count = 0
-                    for item, image_url in zip(attractions_to_search, image_urls):
-                        attraction = item['attraction']
-                        if image_url:
-                            attraction.image_urls = [image_url]
-                            success_count += 1
-                        else:
-                            attraction.image_urls = []
-                            logger.warning(f"❌ 景点 '{attraction.name}' 未找到图片")
-                    
-                    logger.info(f"✅ 图片搜索完成: 成功 {success_count}/{len(attractions_to_search)}")
-                    
-                    # 输出缓存统计
-                    cache_stats = self.unsplash_service.get_cache_stats()
-                    logger.debug(f"📊 Unsplash缓存统计: {cache_stats}")
-                    
+                    logger.debug(
+                        "Unsplash image enrichment stats",
+                        extra={
+                            "image_stats": image_stats,
+                            "cache_stats": self.unsplash_service.get_cache_stats(),
+                        },
+                    )
                 except Exception as e:
-                    logger.error(f"❌ 批量搜索图片失败: {e}")
-                    # 降级：设置空列表
-                    for item in attractions_to_search:
-                        item['attraction'].image_urls = []
-                finally:
-                    loop.close()
+                    logger.error(f"Attraction image enrichment failed: {e}")
+                    for attraction in attractions:
+                        attraction.image_urls = []
             else:
-                logger.info("📸 没有需要搜索图片的景点")
-            
+                logger.info("No attractions require image enrichment")
             # 8. 存储用户偏好记忆
             self.memory_service.store_user_preference(
                 user_id,

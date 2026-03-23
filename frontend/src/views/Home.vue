@@ -221,6 +221,8 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { useTripStore } from '@/stores/trip'
 
+const CITY_OPTIONS_CACHE_KEY = 'citySupportOptions'
+
 const router = useRouter()
 const authStore = useAuthStore()
 const tripStore = useTripStore()
@@ -329,14 +331,35 @@ const mapTaskToStep = (progress: number) => {
 }
 
 const loadCityOptions = async () => {
-  cityOptionsLoading.value = true
+  if (cityOptions.value.length === 0) {
+    cityOptionsLoading.value = true
+  }
   try {
     const response = await tripApi.listCitySupport()
     cityOptions.value = response.cities || []
+    localStorage.setItem(CITY_OPTIONS_CACHE_KEY, JSON.stringify(cityOptions.value))
   } catch {
-    cityOptions.value = []
+    if (cityOptions.value.length === 0) {
+      cityOptions.value = []
+    }
   } finally {
     cityOptionsLoading.value = false
+  }
+}
+
+const hydrateCityOptions = () => {
+  try {
+    const cachedCities = localStorage.getItem(CITY_OPTIONS_CACHE_KEY)
+    if (!cachedCities) {
+      return
+    }
+
+    const parsedCities = JSON.parse(cachedCities)
+    if (Array.isArray(parsedCities)) {
+      cityOptions.value = parsedCities.filter((city): city is string => typeof city === 'string')
+    }
+  } catch {
+    localStorage.removeItem(CITY_OPTIONS_CACHE_KEY)
   }
 }
 
@@ -472,6 +495,7 @@ const handleCancelRequest = () => {
 }
 
 onMounted(() => {
+  hydrateCityOptions()
   loadCityOptions()
 })
 </script>
