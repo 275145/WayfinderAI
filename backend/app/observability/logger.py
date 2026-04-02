@@ -5,7 +5,6 @@
 import json
 import logging
 import logging.handlers
-import os
 import sys
 import traceback
 from contextvars import ContextVar
@@ -15,6 +14,19 @@ from typing import Any, Dict, Optional
 
 # 请求ID上下文变量
 request_id_var: ContextVar[Optional[str]] = ContextVar('request_id', default=None)
+
+SENSITIVE_FIELD_MARKERS = {
+    "password",
+    "passwd",
+    "token",
+    "secret",
+    "authorization",
+    "api_key",
+    "apikey",
+    "access_key",
+    "refresh_token",
+    "cookie",
+}
 
 STANDARD_LOG_RECORD_FIELDS = {
     "args",
@@ -57,6 +69,33 @@ def _extract_log_context(record: logging.LogRecord) -> Dict[str, Any]:
     return context
 
 
+def _is_sensitive_key(key: str) -> bool:
+    normalized = key.lower()
+    return any(marker in normalized for marker in SENSITIVE_FIELD_MARKERS)
+
+
+def _sanitize_value(value: Any, *, key: Optional[str] = None) -> Any:
+    if key and _is_sensitive_key(key):
+        return "***REDACTED***"
+
+    if isinstance(value, dict):
+        return {str(k): _sanitize_value(v, key=str(k)) for k, v in value.items()}
+
+    if isinstance(value, list):
+        return [_sanitize_value(item) for item in value]
+
+    if isinstance(value, tuple):
+        return tuple(_sanitize_value(item) for item in value)
+
+    if isinstance(value, str):
+        compact = value.strip()
+        if len(compact) > 2000:
+            return f"{compact[:2000]}...<truncated>"
+        return compact
+
+    return value
+
+
 class StructuredFormatter(logging.Formatter):
     """
     结构化日志格式化器
@@ -93,7 +132,7 @@ class StructuredFormatter(logging.Formatter):
                 "traceback": traceback.format_exception(*record.exc_info) if record.exc_info else None
             }
         
-        context = _extract_log_context(record)
+        context = _sanitize_value(_extract_log_context(record))
         if context:
             log_data["context"] = context
         
@@ -137,7 +176,7 @@ class HumanReadableFormatter(logging.Formatter):
         if record.exc_info:
             log_line += f"\n{self.formatException(record.exc_info)}"
         
-        context = _extract_log_context(record)
+        context = _sanitize_value(_extract_log_context(record))
         if context:
             context_str = json.dumps(context, ensure_ascii=False, indent=2)
             log_line += f"\n上下文信息:\n{context_str}"
@@ -221,14 +260,21 @@ def setup_logger(
     return logger
 
 
-def set_request_id(request_id: str) -> None:
+def set_request_id(request_id: str):
     """
     设置当前请求的ID
     
     Args:
         request_id: 请求ID
     """
-    request_id_var.set(request_id)
+    return request_id_var.set(request_id)
+
+
+def clear_request_id(token=None) -> None:
+    if token is not None:
+        request_id_var.reset(token)
+    else:
+        request_id_var.set(None)
 
 
 def get_request_id() -> Optional[str]:
@@ -256,7 +302,7 @@ def log_with_context(
         message: 日志消息
         **context: 额外的上下文信息
     """
-    extra = {'extra_context': context}
+    extra = {'extra_context': _sanitize_value(context)}
     logger.log(level, message, extra=extra)
 
 

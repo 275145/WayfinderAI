@@ -247,7 +247,137 @@ class PlannerAgent:
         
         return plan
     
-    def _construct_prompt(self, request: TripPlanRequest, attractions: str, hotels: str, weather: str) -> str:
+    def _synthesize_agent_output(
+        self,
+        *,
+        role_name: str,
+        raw_result: str,
+        request: TripPlanRequest,
+        output_schema: str,
+        request_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        prompt = f"""
+        你是多智能体协作流程中的结构化整理器。
+        当前任务来自 {role_name}，请将原始输出整理成严格 JSON。
+
+        目的地: {request.destination}
+        出行日期: {request.start_date} 到 {request.end_date}
+        偏好: {', '.join(request.preferences or []) or '无'}
+        酒店偏好: {', '.join(request.hotel_preferences or []) or '无'}
+        预算: {request.budget}
+
+        输出要求:
+        1. 只返回 JSON 对象。
+        2. 保留不确定性，无法确认时放入 warnings。
+        3. 不要编造原始结果中没有的明确事实。
+        4. location 中的经纬度如果无法确定则置为 null。
+
+        JSON 结构:
+        {output_schema}
+
+        原始结果:
+        {raw_result}
+        """
+
+        fallback_payload = {"summary": raw_result[:500], "warnings": ["structured_parse_failed"], "items": []}
+        try:
+            response = self.llm.invoke(
+                [
+                    {"role": "system", "content": "You convert agent outputs into strict JSON for downstream orchestration."},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+                usage_key=request_id,
+            )
+            return json.loads(response)
+        except Exception as exc:
+            logger.warning(
+                "Failed to synthesize structured agent output",
+                extra={"role_name": role_name, "error": str(exc)},
+            )
+            return fallback_payload
+
+    def _build_structured_collaboration_payload(
+        self,
+        request: TripPlanRequest,
+        *,
+        attractions_raw: str,
+        hotels_raw: str,
+        weather_raw: str,
+        request_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        attraction_schema = """
+        {
+          "summary": "string",
+          "warnings": ["string"],
+          "items": [
+            {
+              "name": "string",
+              "type": "string",
+              "address": "string",
+              "location": {"lat": 0, "lng": 0}
+            }
+          ]
+        }
+        """
+        hotel_schema = """
+        {
+          "summary": "string",
+          "warnings": ["string"],
+          "items": [
+            {
+              "name": "string",
+              "address": "string",
+              "price": "string",
+              "rating": "string",
+              "location": {"lat": 0, "lng": 0}
+            }
+          ]
+        }
+        """
+        weather_schema = """
+        {
+          "summary": "string",
+          "warnings": ["string"],
+          "forecast": [
+            {
+              "date": "YYYY-MM-DD",
+              "day_weather": "string",
+              "night_weather": "string",
+              "day_temp": "string",
+              "night_temp": "string",
+              "day_wind": "string",
+              "night_wind": "string"
+            }
+          ]
+        }
+        """
+
+        return {
+            "attractions": self._synthesize_agent_output(
+                role_name="attraction_agent",
+                raw_result=attractions_raw,
+                request=request,
+                output_schema=attraction_schema,
+                request_id=request_id,
+            ),
+            "hotels": self._synthesize_agent_output(
+                role_name="hotel_agent",
+                raw_result=hotels_raw,
+                request=request,
+                output_schema=hotel_schema,
+                request_id=request_id,
+            ),
+            "weather": self._synthesize_agent_output(
+                role_name="weather_agent",
+                raw_result=weather_raw,
+                request=request,
+                output_schema=weather_schema,
+                request_id=request_id,
+            ),
+        }
+
+    def _construct_prompt(self, request: TripPlanRequest, attractions: Dict[str, Any], hotels: Dict[str, Any], weather: Dict[str, Any]) -> str:
         start_date = datetime.strptime(request.start_date, "%Y-%m-%d")
         end_date = datetime.strptime(request.end_date, "%Y-%m-%d")
         duration = (end_date - start_date).days + 1
@@ -266,9 +396,9 @@ class PlannerAgent:
         - 酒店偏好: {', '.join(request.hotel_preferences) if request.hotel_preferences else '无'}
 
         **可用资源:**
-        - **推荐景点列表:**\n{(attractions)}
-        - **推荐酒店列表:**\n{(hotels)}
-        - **天气预报:**\n{(weather)}
+        - **结构化景点候选:**\n{json.dumps(attractions, ensure_ascii=False, indent=2)}
+        - **结构化酒店候选:**\n{json.dumps(hotels, ensure_ascii=False, indent=2)}
+        - **结构化天气信息:**\n{json.dumps(weather, ensure_ascii=False, indent=2)}
 
         **输出要求:**
         1. 严格按照系统提示中给定的 JSON 结构和字段名生成行程计划。
@@ -447,7 +577,25 @@ class PlannerAgent:
             
             # 4. 行程规划
             logger.info("开始行程规划...")
-            prompt = self._construct_prompt(request, attractions, hotels, weather)
+            collaboration_payload = self._build_structured_collaboration_payload(
+                request,
+                attractions_raw=attractions or "",
+                hotels_raw=hotels or "",
+                weather_raw=weather or "",
+                request_id=request_id,
+            )
+            context_manager.share_data("structured_collaboration_payload", collaboration_payload, from_agent="orchestrator")
+            context_manager.share_data(
+                "attraction_locations",
+                collaboration_payload.get("attractions", {}).get("items", []),
+                from_agent="orchestrator",
+            )
+            prompt = self._construct_prompt(
+                request,
+                collaboration_payload["attractions"],
+                collaboration_payload["hotels"],
+                collaboration_payload["weather"],
+            )
             json_plan_str = planner_agent.run(prompt)
         
             if not json_plan_str:

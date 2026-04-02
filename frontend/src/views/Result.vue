@@ -1,34 +1,34 @@
 <template>
   <div class="result-container" v-if="tripPlan">
-    <!-- 背景装饰 -->
+    <!-- 鑳屾櫙瑁呴グ -->
     <div class="background-decoration">
       <div class="decoration-wave wave-1"></div>
       <div class="decoration-wave wave-2"></div>
     </div>
 
     <div class="result-content" ref="contentRef">
-      <!-- 头部信息 -->
+      <!-- 澶撮儴淇℃伅 -->
       <div class="header-section">
         <el-card class="header-card">
           <div class="trip-header">
             <div class="header-left">
               <div class="back-button" @click="goBack">
                 <el-icon><Back /></el-icon>
-                <span>返回</span>
+                <span>杩斿洖</span>
               </div>
               <div class="header-title">
                 <h1>{{ tripPlan.trip_title }}</h1>
                 <div class="header-meta">
                   <span class="meta-item">
                     <el-icon><Calendar /></el-icon>
-                    {{ tripPlan.days.length }}天{{ tripPlan.days.length - 1 }}晚
+                    {{ tripPlan.days.length }}澶﹞{{ tripPlan.days.length - 1 }}鏅?
                   </span>
                   <span class="meta-item">
                     <el-icon><Wallet /></el-icon>
-                    预算估算：¥{{ tripPlan.total_budget.total }}
+                    棰勭畻浼扮畻锛毬{{ tripPlan.total_budget.total }}
                   </span>
                   <span class="meta-item" v-if="tripPlan.version != null">
-                    版本：v{{ tripPlan.version }}
+                    鐗堟湰锛歷{{ tripPlan.version }}
                   </span>
                 </div>
               </div>
@@ -36,15 +36,15 @@
             <div class="header-actions">
               <el-button @click="goEdit" size="large" class="action-btn">
                 <el-icon><Edit /></el-icon>
-                编辑行程
+                缂栬緫琛岀▼
               </el-button>
-              <ExportButtons :trip-plan="tripPlan" :content-ref="contentRef" />
+              <ExportButtons :trip-plan="tripPlan" :content-ref="contentRef" :map-ref="mapViewRef" />
             </div>
           </div>
         </el-card>
       </div>
 
-      <!-- 主要内容区 -->
+      <!-- 涓昏鍐呭鍖?-->
       <el-alert
         v-if="tripPlan.city_support_message"
         :title="tripPlan.city_support_message"
@@ -54,75 +54,75 @@
       />
 
       <el-row :gutter="24" class="main-content">
-        <!-- 左侧：地图和行程 -->
+        <!-- 宸︿晶锛氬湴鍥惧拰琛岀▼ -->
         <el-col :xl="16" :lg="16" :md="24" :sm="24" :xs="24">
-          <!-- 地图展示 -->
+          <!-- 鍦板浘灞曠ず -->
           <el-card class="map-card" shadow="hover">
             <template #header>
               <div class="card-header-custom">
-                <h3>📍 行程地图</h3>
-                <el-tag type="success" size="small">{{ allPoints.length }} 个地点</el-tag>
+                <h3>馃搷 琛岀▼鍦板浘</h3>
+                <el-tag type="success" size="small">{{ allPoints.length }} 涓湴鐐?</el-tag>
               </div>
             </template>
-            <MapView :points="allPoints" :center="mapCenter" />
+            <MapView ref="mapViewRef" :points="allPoints" :center="mapCenter" />
           </el-card>
 
-          <!-- 每日行程 -->
-          <el-card 
-            class="daily-plan-card" 
-            v-for="day in tripPlan.days" 
+          <!-- 姣忔棩琛岀▼ -->
+          <el-card
+            class="daily-plan-card"
+            v-for="day in tripPlan.days"
             :key="day.day"
             shadow="hover"
           >
             <template #header>
               <div class="day-header">
                 <div class="day-info">
-                  <div class="day-badge">第 {{ day.day }} 天</div>
-                    <div class="day-content">
-                      <h3>{{ day.theme }}</h3>
-                      <div class="weather-info" v-if="day.weather">
-                        <span class="weather-item">
-                          <el-icon><Sunny /></el-icon>
-                          {{ day.weather.day_weather }} / {{ day.weather.night_weather }}
-                        </span>
-                        <span class="weather-item">
-                          温度：{{ day.weather.day_temp }}°C / {{ day.weather.night_temp }}°C
-                        </span>
-                        <span
-                          class="weather-item"
-                          v-if="day.weather.day_wind || day.weather.night_wind"
-                        >
-                          风向风力：
-                          <template v-if="day.weather.day_wind">
-                            白天 {{ day.weather.day_wind }}
-                          </template>
-                          <template v-if="day.weather.night_wind">
-                            ，夜间 {{ day.weather.night_wind }}
-                          </template>
-                        </span>
-                      </div>
+                  <div class="day-badge">绗?{{ day.day }} 澶?</div>
+                  <div class="day-content">
+                    <h3>{{ day.theme }}</h3>
+                    <div class="weather-info" v-if="day.weather">
+                      <span class="weather-item">
+                        <el-icon><Sunny /></el-icon>
+                        {{ day.weather.day_weather }} / {{ day.weather.night_weather }}
+                      </span>
+                      <span class="weather-item">
+                        娓╁害锛歿{{ day.weather.day_temp }}掳C / {{ day.weather.night_temp }}掳C
+                      </span>
+                      <span
+                        class="weather-item"
+                        v-if="day.weather.day_wind || day.weather.night_wind"
+                      >
+                        椋庡悜椋庡姏锛?
+                        <template v-if="day.weather.day_wind">
+                          鐧藉ぉ {{ day.weather.day_wind }}
+                        </template>
+                        <template v-if="day.weather.night_wind">
+                          锛屽闂?{{ day.weather.night_wind }}
+                        </template>
+                      </span>
                     </div>
+                  </div>
                 </div>
               </div>
             </template>
 
-            <!-- 推荐住宿 -->
+            <!-- 鎺ㄨ崘浣忓 -->
             <div v-if="day.recommended_hotel" class="recommended-hotel">
               <el-card shadow="never">
                 <div class="recommended-hotel-content">
-                  <div class="hotel-icon">🏨</div>
+                  <div class="hotel-icon">馃彣</div>
                   <div class="hotel-info">
-                    <h4>推荐住宿：{{ day.recommended_hotel.name }}</h4>
+                    <h4>鎺ㄨ崘浣忓锛歿{{ day.recommended_hotel.name }}</h4>
                     <p class="hotel-address">
                       <el-icon><Location /></el-icon>
                       {{ day.recommended_hotel.address }}
                     </p>
                     <div class="hotel-meta">
                       <span v-if="day.recommended_hotel.distance_to_main_attraction_km != null">
-                        距主要景点约 {{ day.recommended_hotel.distance_to_main_attraction_km }} km
+                        璺濅富瑕佹櫙鐐圭害 {{ day.recommended_hotel.distance_to_main_attraction_km }} km
                       </span>
                       <span v-if="day.budget.hotel_cost > 0" class="cost">
-                        酒店预算：¥{{ day.budget.hotel_cost.toFixed(2) }}
+                        閰掑簵棰勭畻锛毬{{ day.budget.hotel_cost.toFixed(2) }}
                       </span>
                     </div>
                   </div>
@@ -130,23 +130,23 @@
               </el-card>
             </div>
 
-            <!-- 景点列表 -->
+            <!-- 鏅偣鍒楄〃 -->
             <div class="section-title">
-              <h4>🎯 景点安排</h4>
-              <span class="section-subtitle">共 {{ day.attractions.length }} 个景点</span>
+              <h4>馃幆 鏅偣瀹夋帓</h4>
+              <span class="section-subtitle">鍏?{{ day.attractions.length }} 涓櫙鐐?</span>
             </div>
 
             <el-timeline class="activity-timeline">
               <el-timeline-item
                 v-for="(attraction, index) in day.attractions"
                 :key="`attraction-${index}`"
-                :timestamp="`第 ${index + 1} 站`"
+                :timestamp="`绗?${index + 1} 绔檂`"
                 placement="top"
                 :color="getActivityColor('attraction')"
               >
                 <el-card class="activity-card" :class="{ 'has-image': attraction.image_urls && attraction.image_urls.length > 0 }">
                   <div class="activity-content">
-                    <!-- 左侧：图片，优先使用景点图片，缺失时显示默认图 -->
+                    <!-- 宸︿晶锛氬浘鐗囷紝浼樺厛浣跨敤鏅偣鍥剧墖锛岀己澶辨椂鏄剧ず榛樿鍥?-->
                     <div class="activity-image">
                       <div class="attraction-number-badge">{{ index + 1 }}</div>
                       <el-image
@@ -162,33 +162,33 @@
                         </template>
                         <template #error>
                           <div class="image-error image-fallback">
-                            <!-- 默认景点图片 -->
+                            <!-- 榛樿鏅偣鍥剧墖 -->
                           </div>
                         </template>
                       </el-image>
                     </div>
 
-                    <!-- 右侧：内容 -->
+                    <!-- 鍙充晶锛氬唴瀹?-->
                     <div class="activity-main">
                       <div class="activity-icon">{{ getActivityIcon('attraction') }}</div>
                       <div class="activity-info">
                         <h4>{{ attraction.name }}</h4>
                         <p class="activity-details">{{ attraction.description }}</p>
                         <div class="activity-meta">
-                          <el-tag size="small">景点 · {{ attraction.type }}</el-tag>
+                          <el-tag size="small">鏅偣 路 {{ attraction.type }}</el-tag>
                           <span v-if="attraction.ticket_price && attraction.ticket_price !== 'N/A'" class="cost">
                             <template v-if="typeof attraction.ticket_price === 'number'">
-                              门票：¥{{ attraction.ticket_price }}
+                              闂ㄧエ锛毬{{ attraction.ticket_price }}
                             </template>
-                            <template v-else-if="attraction.ticket_price === '免费'">
-                              门票：免费
+                            <template v-else-if="attraction.ticket_price === '鍏嶈垂'">
+                              闂ㄧエ锛氬厤璐?
                             </template>
                             <template v-else>
-                              门票：{{ attraction.ticket_price }}
+                              闂ㄧエ锛歿{{ attraction.ticket_price }}
                             </template>
                           </span>
                           <span v-if="attraction.suggested_duration_hours" class="duration">
-                            建议游玩：{{ attraction.suggested_duration_hours }} 小时
+                            寤鸿娓哥帺锛歿{{ attraction.suggested_duration_hours }} 灏忔椂
                           </span>
                         </div>
                       </div>
@@ -198,10 +198,10 @@
               </el-timeline-item>
             </el-timeline>
 
-            <!-- 餐饮列表 -->
+            <!-- 椁愰ギ鍒楄〃 -->
             <div class="section-title" v-if="day.dinings && day.dinings.length > 0">
-              <h4>🍽️ 餐饮推荐</h4>
-              <span class="section-subtitle">共 {{ day.dinings.length }} 家餐厅</span>
+              <h4>馃嵔锔?椁愰ギ鎺ㄨ崘</h4>
+              <span class="section-subtitle">鍏?{{ day.dinings.length }} 瀹堕鍘?</span>
             </div>
             <div v-if="day.dinings && day.dinings.length > 0" class="dining-list">
               <el-card
@@ -220,10 +220,10 @@
                     </p>
                     <div class="dining-meta">
                       <span v-if="dining.cost_per_person && dining.cost_per_person !== 'N/A'">
-                        人均：¥{{ dining.cost_per_person }}
+                        浜哄潎锛毬{{ dining.cost_per_person }}
                       </span>
                       <span v-if="dining.rating && dining.rating !== 'N/A'">
-                        评分：{{ dining.rating }}
+                        璇勫垎锛歿{{ dining.rating }}
                       </span>
                     </div>
                   </div>
@@ -233,17 +233,17 @@
           </el-card>
         </el-col>
 
-        <!-- 右侧：预算和酒店 -->
+        <!-- 鍙充晶锛氶绠楀拰閰掑簵 -->
         <el-col :xl="8" :lg="8" :md="24" :sm="24" :xs="24">
-          <!-- 预算明细 -->
+          <!-- 棰勭畻鏄庣粏 -->
           <BudgetSummary :trip-plan="tripPlan" class="budget-section" />
 
-          <!-- 推荐酒店 -->
+          <!-- 鎺ㄨ崘閰掑簵 -->
           <el-card class="hotels-card" v-if="tripPlan.hotels && tripPlan.hotels.length > 0" shadow="hover">
             <template #header>
               <div class="card-header-custom">
-                <h3>🏨 推荐酒店</h3>
-                <el-tag type="warning" size="small">{{ tripPlan.hotels.length }} 家</el-tag>
+                <h3>馃彣 鎺ㄨ崘閰掑簵</h3>
+                <el-tag type="warning" size="small">{{ tripPlan.hotels.length }} 瀹?</el-tag>
               </div>
             </template>
             <div class="hotel-list">
@@ -264,7 +264,7 @@
                     />
                     <span class="hotel-price" v-if="hotel.price">
                       <template v-if="typeof hotel.price === 'number' && hotel.price > 0">
-                        ¥{{ hotel.price.toFixed(2) }} / 晚
+                        楼{{ hotel.price.toFixed(2) }} / 鏅?
                       </template>
                       <template v-else>
                         {{ hotel.price }}
@@ -276,11 +276,11 @@
             </div>
           </el-card>
 
-          <!-- 旅行贴士 -->
+          <!-- 鏃呰璐村＋ -->
           <el-card class="tips-card" shadow="hover">
             <template #header>
               <div class="card-header-custom">
-                <h3>💡 旅行贴士</h3>
+                <h3>馃挕 鏃呰璐村＋</h3>
               </div>
             </template>
             <ul class="tips-list">
@@ -294,27 +294,27 @@
       </el-row>
     </div>
   </div>
-  
-  <el-empty v-else description="暂无行程数据">
-    <el-button type="primary" @click="goBack">返回首页</el-button>
+
+  <el-empty v-else description="鏆傛棤琛岀▼鏁版嵁">
+    <el-button type="primary" @click="goBack">杩斿洖棣栭〉</el-button>
   </el-empty>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { 
-  Back, 
-  Edit, 
-  Loading, 
-  Calendar, 
-  Wallet, 
-  Location, 
-  Sunny, 
-  Check 
+import {
+  Back,
+  Edit,
+  Loading,
+  Calendar,
+  Wallet,
+  Location,
+  Sunny,
+  Check,
 } from '@element-plus/icons-vue'
 import BudgetSummary from '@/components/BudgetSummary.vue'
-import type { TripPlanResponse, MapPoint, Location as LocationType } from '@/types'
+import type { Location as LocationType, MapPoint, TripPlanResponse } from '@/types'
 import { useTripStore } from '@/stores/trip'
 
 const MapView = defineAsyncComponent(() => import('@/components/MapView.vue'))
@@ -323,153 +323,99 @@ const ExportButtons = defineAsyncComponent(() => import('@/components/ExportButt
 const router = useRouter()
 const tripStore = useTripStore()
 const contentRef = ref<HTMLElement>()
-const tripPlan = ref<TripPlanResponse | null>(null)
+const mapViewRef = ref<any>(null)
 
-// 默认景点图片（当无法获取真实图片时使用）
+const tripPlan = computed<TripPlanResponse | null>(() => {
+  return tripStore.currentTrip ?? tripStore.hydrateCurrentTrip()
+})
+
 const DEFAULT_ATTRACTION_IMAGE =
   'https://images.unsplash.com/photo-1508261306211-45a1c5c2a5c5?auto=format&fit=crop&w=900&q=80'
 
-// 旅行贴士列表
 const tips = [
-  '提前预订门票和酒店可享受优惠',
-  '关注当地天气变化，准备合适衣物',
-  '随身携带充电宝和常用药品',
-  '建议购买旅游保险，保障出行安全',
-  '保管好个人财物和重要证件',
-  '尊重当地文化和习俗，做文明游客'
+  '鎻愬墠棰勮闂ㄧエ鍜岄厭搴楀彲浜彈浼樻儬',
+  '鍏虫敞褰撳湴澶╂皵鍙樺寲锛屽噯澶囧悎閫傝。鐗?',
+  '闅忚韩鎼哄甫鍏呯數瀹濆拰甯哥敤鑽搧',
+  '寤鸿璐拱鏃呮父淇濋櫓锛屼繚闅滃嚭琛屽畨鍏?',
+  '淇濈濂戒釜浜鸿储鐗╁拰閲嶈璇佷欢',
+  '灏婇噸褰撳湴鏂囧寲鍜屼範淇楋紝鍋氭枃鏄庢父瀹?',
 ]
 
-// 数据清理函数，确保经纬度是数字
-const sanitizeTripPlan = (plan: TripPlanResponse): TripPlanResponse => {
-  plan.days.forEach(day => {
-    day.attractions.forEach(attraction => {
-      if (attraction.location) {
-        attraction.location.lat = parseFloat(attraction.location.lat as any)
-        attraction.location.lng = parseFloat(attraction.location.lng as any)
-      }
-    })
-    day.dinings.forEach(dining => {
-      if (dining.location) {
-        dining.location.lat = parseFloat(dining.location.lat as any)
-        dining.location.lng = parseFloat(dining.location.lng as any)
-      }
-    })
-    if (day.recommended_hotel?.location) {
-      day.recommended_hotel.location.lat = parseFloat(day.recommended_hotel.location.lat as any)
-      day.recommended_hotel.location.lng = parseFloat(day.recommended_hotel.location.lng as any)
-    }
-  })
-  if (plan.hotels) {
-    plan.hotels.forEach(hotel => {
-      if (hotel.location) {
-        hotel.location.lat = parseFloat(hotel.location.lat as any)
-        hotel.location.lng = parseFloat(hotel.location.lng as any)
-      }
-    })
-  }
-  return plan
-}
-
-// 获取行程数据
-onMounted(() => {
-  // 统一从 sessionStorage 读取，避免在 history.state 里传大对象
-  let planData: TripPlanResponse | null = null
-  const savedPlan = sessionStorage.getItem('currentTripPlan')
-  if (savedPlan) {
-    planData = JSON.parse(savedPlan)
-  }
-  
-  if (planData) {
-    tripPlan.value = sanitizeTripPlan(planData)
-    // 保存清理后的数据到 sessionStorage
-    sessionStorage.setItem('currentTripPlan', JSON.stringify(tripPlan.value))
-  } else {
-    // 如果仍然没有数据，可以跳转回主页或显示错误
-    // router.push('/')
-  }
-})
-
-// 获取所有点位用于地图展示（景点 + 餐饮 + 酒店）
 const allPoints = computed<MapPoint[]>(() => {
   if (!tripPlan.value) return []
 
   const points: MapPoint[] = []
 
-  tripPlan.value.days.forEach(day => {
-    day.attractions.forEach(attraction => {
+  tripPlan.value.days.forEach((day) => {
+    day.attractions.forEach((attraction) => {
       points.push({
         name: attraction.name,
         type: 'attraction',
         description: attraction.description,
-        location: attraction.location
+        location: attraction.location,
       })
     })
-    day.dinings.forEach(dining => {
+
+    day.dinings.forEach((dining) => {
       points.push({
         name: dining.name,
         type: 'dining',
         description: dining.address,
-        location: dining.location
+        location: dining.location,
       })
     })
+
     if (day.recommended_hotel?.location) {
       points.push({
         name: day.recommended_hotel.name,
         type: 'hotel',
         description: day.recommended_hotel.address,
-        location: day.recommended_hotel.location
+        location: day.recommended_hotel.location,
       })
     }
   })
 
-  return points.filter(p => p.location)
+  return points.filter((point): point is MapPoint & { location: LocationType } => Boolean(point.location))
 })
 
-// 计算地图中心点
 const mapCenter = computed((): LocationType | undefined => {
-  const points = allPoints.value.filter(p => p.location)
-  if (points.length === 0) return undefined
-
-  return points[0].location
+  return allPoints.value[0]?.location
 })
 
-// 获取活动类型颜色
 const getActivityColor = (type: string): string => {
   const colorMap: Record<string, string> = {
     attraction: '#409eff',
     dining: '#67c23a',
     hotel: '#e6a23c',
-    transport: '#909399'
+    transport: '#909399',
   }
   return colorMap[type] || '#909399'
 }
 
-// 获取活动图标
 const getActivityIcon = (type: string): string => {
   const iconMap: Record<string, string> = {
-    attraction: '🎯',
-    dining: '🍽️',
-    hotel: '🏨',
-    transport: '🚗'
+    attraction: '馃幆',
+    dining: '馃嵔锔?',
+    hotel: '馃彣',
+    transport: '馃殫',
   }
-  return iconMap[type] || '📍'
+  return iconMap[type] || '馃搷'
 }
 
-// 返回首页
 const goBack = () => {
   router.push({ name: 'Home' })
 }
 
-// 编辑行程
 const goEdit = () => {
   if (tripPlan.value) {
     tripStore.startEditing(tripPlan.value, 'result')
   }
-  router.push({ 
+
+  router.push({
     name: 'EditPlan',
     query: {
-      returnTo: 'result'
-    }
+      returnTo: 'result',
+    },
   })
 }
 </script>
@@ -481,7 +427,7 @@ const goEdit = () => {
   padding: 0;
   background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
 
-  // 背景装饰
+  // 鑳屾櫙瑁呴グ
   .background-decoration {
     position: absolute;
     width: 100%;
@@ -521,7 +467,7 @@ const goEdit = () => {
     margin-bottom: 16px;
   }
 
-  // 头部区域
+  // 澶撮儴鍖哄煙
   .header-section {
     margin-bottom: 24px;
 
@@ -534,7 +480,7 @@ const goEdit = () => {
       :deep(.el-card__body) {
         padding: 24px 32px;
       }
-      
+
       .trip-header {
         display: flex;
         justify-content: space-between;
@@ -582,7 +528,7 @@ const goEdit = () => {
             .header-meta {
               display: flex;
               gap: 24px;
-              
+
               .meta-item {
                 display: flex;
                 align-items: center;
@@ -597,7 +543,7 @@ const goEdit = () => {
             }
           }
         }
-        
+
         .header-actions {
           display: flex;
           gap: 12px;
@@ -617,9 +563,9 @@ const goEdit = () => {
     }
   }
 
-  // 主要内容
+  // 涓昏鍐呭
   .main-content {
-    // 通用卡片头部
+    // 閫氱敤鍗＄墖澶撮儴
     .card-header-custom {
       display: flex;
       justify-content: space-between;
@@ -654,7 +600,7 @@ const goEdit = () => {
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
         transform: translateY(-2px);
       }
-      
+
       .day-header {
         .day-info {
           display: flex;
@@ -704,13 +650,13 @@ const goEdit = () => {
 
       .activity-timeline {
         padding: 20px 0;
-        
+
         .activity-card {
           margin-top: 8px;
           transition: all 0.3s ease;
           border-radius: 12px;
           border: none;
-          
+
           &:hover {
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
             transform: translateX(4px);
@@ -722,7 +668,7 @@ const goEdit = () => {
               gap: 20px;
             }
           }
-          
+
           .activity-content {
             .activity-image {
               flex-shrink: 0;
@@ -780,7 +726,7 @@ const goEdit = () => {
               display: flex;
               gap: 16px;
               flex: 1;
-              
+
               .activity-icon {
                 font-size: 36px;
                 flex-shrink: 0;
@@ -792,29 +738,29 @@ const goEdit = () => {
                 background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
                 border-radius: 12px;
               }
-              
+
               .activity-info {
                 flex: 1;
-                
+
                 h4 {
                   margin: 0 0 10px 0;
                   font-size: 17px;
                   color: #303133;
                   font-weight: 600;
                 }
-                
+
                 .activity-details {
                   margin: 0 0 12px 0;
                   color: #606266;
                   font-size: 14px;
                   line-height: 1.8;
                 }
-                
+
                 .activity-meta {
                   display: flex;
                   align-items: center;
                   gap: 12px;
-                  
+
                   .cost {
                     font-weight: bold;
                     color: #f56c6c;
@@ -841,7 +787,7 @@ const goEdit = () => {
       &:hover {
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
       }
-      
+
       .hotel-list {
         .hotel-item {
           display: flex;
@@ -849,7 +795,7 @@ const goEdit = () => {
           padding: 20px 0;
           border-bottom: 1px solid #f0f0f0;
           transition: all 0.3s;
-          
+
           &:last-child {
             border-bottom: none;
           }
@@ -875,7 +821,7 @@ const goEdit = () => {
             font-size: 14px;
             box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
           }
-          
+
           .hotel-info {
             flex: 1;
 
@@ -885,7 +831,7 @@ const goEdit = () => {
               color: #303133;
               font-weight: 600;
             }
-            
+
             .hotel-address {
               margin: 0 0 10px 0;
               font-size: 13px;
@@ -898,12 +844,12 @@ const goEdit = () => {
                 color: #409eff;
               }
             }
-            
+
             .hotel-meta {
               display: flex;
               justify-content: space-between;
               align-items: center;
-              
+
               .hotel-price {
                 font-weight: bold;
                 color: #f56c6c;
@@ -923,12 +869,12 @@ const goEdit = () => {
       &:hover {
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
       }
-      
+
       .tips-list {
         margin: 0;
         padding: 0;
         list-style: none;
-        
+
         li {
           display: flex;
           align-items: flex-start;
@@ -971,7 +917,7 @@ const goEdit = () => {
   }
 }
 
-// 响应式设计
+// 鍝嶅簲寮忚璁?
 @media (max-width: 1200px) {
   .result-container {
     .header-section {

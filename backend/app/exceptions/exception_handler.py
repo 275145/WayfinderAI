@@ -1,33 +1,24 @@
 """
-全局异常处理器
-统一处理所有异常并返回标准格式的错误响应
+Global exception handling.
 """
-from fastapi import Request, status, HTTPException
-from fastapi.responses import JSONResponse
+
+from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.config import settings
 from app.exceptions.custom_exceptions import BaseAppException
-from app.exceptions.error_codes import ErrorCode, get_error_message
+from app.exceptions.error_codes import ErrorCode
 from app.observability.logger import default_logger as logger, get_request_id
 
 
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """
-    全局异常处理器
-    
-    Args:
-        request: FastAPI请求对象
-        exc: 异常对象
-    
-    Returns:
-        JSON格式的错误响应
-    """
     request_id = get_request_id()
-    
-    # 处理自定义异常
+
     if isinstance(exc, BaseAppException):
         logger.error(
-            f"业务异常: {exc.message}",
+            f"Business exception: {exc.message}",
             exc_info=True,
             extra={
                 "request_id": request_id,
@@ -35,10 +26,9 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
                 "error_message": exc.message,
                 "details": exc.details,
                 "path": request.url.path,
-                "method": request.method
-            }
+                "method": request.method,
+            },
         )
-        
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
@@ -46,90 +36,87 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
                 "error_code": exc.error_code.value,
                 "error_message": exc.message,
                 "details": exc.details,
-                "request_id": request_id
-            }
+                "request_id": request_id,
+            },
         )
-    
-    # 处理FastAPI验证异常
+
     if isinstance(exc, RequestValidationError):
         errors = exc.errors()
         logger.warning(
-            f"请求验证失败: {errors}",
+            "Request validation failed",
             extra={
                 "request_id": request_id,
                 "errors": errors,
                 "path": request.url.path,
-                "method": request.method
-            }
+                "method": request.method,
+            },
         )
-        
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
                 "success": False,
                 "error_code": ErrorCode.INVALID_PARAMETER.value,
-                "error_message": "请求参数验证失败",
+                "error_message": "Request validation failed",
                 "details": {"validation_errors": errors},
-                "request_id": request_id
-            }
+                "request_id": request_id,
+            },
         )
-    
-    # 处理HTTP异常
+
     if isinstance(exc, (StarletteHTTPException, HTTPException)):
-        status_code = exc.status_code if hasattr(exc, 'status_code') else 500
-        detail = exc.detail if hasattr(exc, 'detail') else str(exc)
-        
-        # 429 Too Many Requests 特殊处理
-        if status_code == 429:
-            error_code = ErrorCode.RATE_LIMIT_EXCEEDED.value
-        else:
-            error_code = ErrorCode.UNKNOWN_ERROR.value
-        
+        status_code = exc.status_code if hasattr(exc, "status_code") else 500
+        detail = exc.detail if hasattr(exc, "detail") else str(exc)
+        safe_detail = detail if status_code < 500 else "Internal server error"
+        error_code = (
+            ErrorCode.RATE_LIMIT_EXCEEDED.value
+            if status_code == 429
+            else ErrorCode.UNKNOWN_ERROR.value
+        )
+
         logger.warning(
-            f"HTTP异常: {detail}",
+            "HTTP exception",
             extra={
                 "request_id": request_id,
                 "status_code": status_code,
-                "detail": detail,
+                "detail": safe_detail,
                 "path": request.url.path,
-                "method": request.method
-            }
+                "method": request.method,
+            },
         )
-        
         return JSONResponse(
             status_code=status_code,
             content={
                 "success": False,
                 "error_code": error_code,
-                "error_message": detail,
-                "request_id": request_id
-            }
+                "error_message": safe_detail,
+                "request_id": request_id,
+            },
         )
-    
-    # 处理其他未知异常
+
     logger.error(
-        f"未处理的异常: {type(exc).__name__}: {str(exc)}",
+        f"Unhandled exception: {type(exc).__name__}: {exc}",
         exc_info=True,
         extra={
             "request_id": request_id,
             "exception_type": type(exc).__name__,
-            "exception_message": str(exc),
             "path": request.url.path,
-            "method": request.method
-        }
+            "method": request.method,
+        },
     )
-    
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "success": False,
             "error_code": ErrorCode.UNKNOWN_ERROR.value,
-            "error_message": "服务器内部错误",
-            "details": {
-                "exception_type": type(exc).__name__,
-                "exception_message": str(exc)
-            },
-            "request_id": request_id
-        }
+            "error_message": "Internal server error",
+            "details": (
+                {
+                    "exception_type": type(exc).__name__,
+                    "exception_message": str(exc),
+                }
+                if settings.EXPOSE_INTERNAL_ERRORS
+                else None
+            ),
+            "request_id": request_id,
+        },
     )
-

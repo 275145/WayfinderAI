@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime
-from threading import Thread
+from threading import Lock, Thread
 from typing import Any, Dict, Optional
 import uuid
+import json
 
 from fastapi import HTTPException
 
 from app.agents.planner import PlannerAgent
+from app.config import settings
 from app.exceptions.custom_exceptions import BusinessException
 from app.exceptions.error_codes import ErrorCode
 from app.models.trip_model import (
@@ -28,6 +30,10 @@ from app.services.vector_memory_service import vector_memory_service
 
 class TripService:
     """Application service for trip planning workflows."""
+
+    _worker_lock = Lock()
+    _worker_started = False
+    _worker_threads: list[Thread] = []
 
     def __init__(
         self,
@@ -64,19 +70,42 @@ class TripService:
         request_data = request.model_dump()
         if not self.redis_service.create_trip_task(task_id, user_id, request_data):
             raise BusinessException(ErrorCode.TRIP_PLAN_FAILED, message="Failed to create trip task")
-
-        worker = Thread(
-            target=self._plan_task_worker,
-            args=(task_id, user_id, request_data),
-            daemon=True,
-        )
-        worker.start()
+        if not self.redis_service.enqueue_trip_task(task_id):
+            self.redis_service.update_trip_task(
+                task_id,
+                status="failed",
+                message="Failed to enqueue trip task",
+                error="queue_error",
+            )
+            raise BusinessException(ErrorCode.TRIP_PLAN_FAILED, message="Failed to enqueue trip task")
         return TripTaskResponse(
             task_id=task_id,
             status="pending",
             progress=0,
             message="Task created",
         )
+
+    def start_async_workers(self) -> None:
+        with self._worker_lock:
+            if self.__class__._worker_started:
+                return
+
+            requeued = self.redis_service.requeue_incomplete_trip_tasks()
+            worker_count = max(1, settings.ASYNC_TASK_WORKER_COUNT)
+            logger.info(
+                "Starting trip task workers",
+                extra={"worker_count": worker_count, "requeued_tasks": requeued},
+            )
+            for index in range(worker_count):
+                worker = Thread(
+                    target=self._task_worker_loop,
+                    args=(f"trip-worker-{index + 1}",),
+                    daemon=True,
+                    name=f"trip-worker-{index + 1}",
+                )
+                worker.start()
+                self.__class__._worker_threads.append(worker)
+            self.__class__._worker_started = True
 
     def get_trip_task(self, task_id: str, user_id: str) -> TripTaskResponse:
         task = self.redis_service.get_trip_task(task_id)
@@ -283,5 +312,43 @@ class TripService:
                 status="failed",
                 progress=100,
                 message="Trip generation failed",
-                error=str(exc),
+                error="trip_generation_failed",
+            )
+
+    def _task_worker_loop(self, worker_id: str) -> None:
+        logger.info("Trip task worker started", extra={"worker_id": worker_id})
+        while True:
+            task_id = self.redis_service.dequeue_trip_task(timeout_seconds=5)
+            if not task_id:
+                continue
+
+            claimed_task = self.redis_service.claim_trip_task(
+                task_id=task_id,
+                worker_id=worker_id,
+                lease_seconds=settings.ASYNC_TASK_LEASE_SECONDS,
+            )
+            if not claimed_task:
+                continue
+
+            request_data_raw = claimed_task.get("request_data", "{}")
+            try:
+                request_data = (
+                    json.loads(request_data_raw)
+                    if isinstance(request_data_raw, str)
+                    else dict(request_data_raw)
+                )
+            except Exception:
+                self.redis_service.update_trip_task(
+                    task_id,
+                    status="failed",
+                    progress=100,
+                    message="Invalid task payload",
+                    error="invalid_request_payload",
+                )
+                continue
+
+            self._plan_task_worker(
+                task_id=task_id,
+                user_id=claimed_task.get("user_id", ""),
+                request_data=request_data,
             )

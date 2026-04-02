@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .api.v1 import auth as auth_v1
 from .api.v1 import trip as trip_v1
+from .api.dependencies import get_trip_service
 from .config import settings
 from .exceptions.exception_handler import global_exception_handler
 from .middleware.auth import AuthMiddleware
@@ -76,6 +77,7 @@ def _register_events(app: FastAPI) -> None:
     def on_startup():
         logger.info("Trip Planner API started")
         logger.info("Vector memory stats", extra={"stats": vector_memory_service.get_stats()})
+        get_trip_service().start_async_workers()
 
 
 app = create_app()

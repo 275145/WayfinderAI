@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     PORT: int = 8000
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
     LOG_LEVEL: str = "INFO"
+    DEBUG: bool = False
+    EXPOSE_INTERNAL_ERRORS: bool = False
 
     UNSPLASH_ACCESS_KEY: Optional[str] = None
     UNSPLASH_SECRET_KEY: Optional[str] = None
@@ -35,6 +37,7 @@ class Settings(BaseSettings):
 
     JWT_SECRET: str = "your-secret-key-change-in-production"
     JWT_EXPIRY_HOURS: int = 24
+    COOKIE_SECURE: bool = False
 
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
@@ -47,6 +50,9 @@ class Settings(BaseSettings):
     VECTOR_MEMORY_DIR: str = "vector_memory"
     EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     VECTOR_DIM: int = 384
+
+    ASYNC_TASK_WORKER_COUNT: int = 1
+    ASYNC_TASK_LEASE_SECONDS: int = 30 * 60
 
     HF_ENDPOINT: str = "https://hf-mirror.com"
     HF_HUB_OFFLINE: bool = False

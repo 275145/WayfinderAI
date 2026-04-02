@@ -7,6 +7,7 @@ import hashlib
 from typing import Dict, Optional, Any, List
 from contextlib import contextmanager
 import redis
+from redis.exceptions import WatchError
 import bcrypt
 from app.observability.logger import default_logger as logger
 from app.config import settings
@@ -81,6 +82,9 @@ class RedisService:
     def _generate_trip_task_key(self, task_id: str) -> str:
         """生成行程任务Redis键"""
         return f"trip_task:{task_id}"
+
+    def _generate_trip_task_queue_key(self) -> str:
+        return "trip_task_queue"
     
     def _hash_password(self, password: str) -> str:
         """
@@ -788,6 +792,9 @@ class RedisService:
                 "message": "任务已创建，等待调度",
                 "created_at": now,
                 "updated_at": now,
+                "started_at": "",
+                "worker_id": "",
+                "lease_expires_at": "",
                 "request_data": json.dumps(request_data, ensure_ascii=False),
                 "result_trip_id": "",
                 "error": "",
@@ -801,11 +808,135 @@ class RedisService:
             logger.error(f"创建行程任务失败: {str(e)}")
             return False
 
+    def enqueue_trip_task(self, task_id: str) -> bool:
+        try:
+            self.redis.rpush(self._generate_trip_task_queue_key(), task_id)
+            return True
+        except Exception as e:
+            logger.error(f"鍏ラ槦琛岀▼浠诲姟澶辫触: {str(e)}")
+            return False
+
+    def dequeue_trip_task(self, timeout_seconds: int = 5) -> Optional[str]:
+        try:
+            item = self.redis.blpop(self._generate_trip_task_queue_key(), timeout=timeout_seconds)
+            if not item:
+                return None
+            _, task_id = item
+            return task_id
+        except Exception as e:
+            logger.error(f"鍑洪槦琛岀▼浠诲姟澶辫触: {str(e)}")
+            return None
+
+    def claim_trip_task(self, task_id: str, worker_id: str, lease_seconds: int) -> Optional[Dict[str, Any]]:
+        key = self._generate_trip_task_key(task_id)
+
+        for _ in range(3):
+            pipe = self.redis.pipeline()
+            try:
+                pipe.watch(key)
+                task = pipe.hgetall(key)
+                if not task:
+                    return None
+
+                status = task.get("status", "pending")
+                lease_expires_at = task.get("lease_expires_at", "")
+                lease_is_valid = False
+                if lease_expires_at:
+                    try:
+                        lease_is_valid = datetime.datetime.fromisoformat(lease_expires_at) > datetime.datetime.now()
+                    except ValueError:
+                        lease_is_valid = False
+
+                if status not in {"pending", "running"}:
+                    return None
+                if status == "running" and lease_is_valid:
+                    return None
+
+                now = datetime.datetime.now()
+                started_at = task.get("started_at") or now.isoformat()
+                lease_until = (now + datetime.timedelta(seconds=lease_seconds)).isoformat()
+
+                pipe.multi()
+                pipe.hset(
+                    key,
+                    mapping={
+                        "status": "running",
+                        "worker_id": worker_id,
+                        "started_at": started_at,
+                        "lease_expires_at": lease_until,
+                        "updated_at": now.isoformat(),
+                    },
+                )
+                pipe.expire(key, 24 * 60 * 60)
+                pipe.execute()
+
+                task.update(
+                    {
+                        "status": "running",
+                        "worker_id": worker_id,
+                        "started_at": started_at,
+                        "lease_expires_at": lease_until,
+                    }
+                )
+                return task
+            except WatchError:
+                continue
+            except Exception as e:
+                logger.error(f"璁ょ淮琛岀▼浠诲姟澶辫触: {str(e)}")
+                return None
+            finally:
+                pipe.reset()
+        return None
+
+    def requeue_incomplete_trip_tasks(self) -> int:
+        requeued = 0
+        now = datetime.datetime.now()
+        try:
+            for key in self.redis.scan_iter(match="trip_task:*"):
+                task = self.redis.hgetall(key)
+                if not task:
+                    continue
+
+                status = task.get("status", "pending")
+                if status not in {"pending", "running"}:
+                    continue
+
+                lease_expires_at = task.get("lease_expires_at", "")
+                lease_expired = True
+                if lease_expires_at:
+                    try:
+                        lease_expired = datetime.datetime.fromisoformat(lease_expires_at) <= now
+                    except ValueError:
+                        lease_expired = True
+
+                if status == "running" and not lease_expired:
+                    continue
+
+                task_id = task.get("task_id")
+                if not task_id:
+                    continue
+
+                self.update_trip_task(
+                    task_id,
+                    status="pending",
+                    message="Task re-queued after worker recovery",
+                    worker_id="",
+                    lease_expires_at="",
+                )
+                self.enqueue_trip_task(task_id)
+                requeued += 1
+        except Exception as e:
+            logger.error(f"閲嶆柊鍏ラ槦鏈畬鎴愪换鍔″け璐? {str(e)}")
+        return requeued
+
     def update_trip_task(self, task_id: str, **fields) -> bool:
         try:
             key = self._generate_trip_task_key(task_id)
             if not self.redis.exists(key):
                 return False
+            if fields.get("status") in {"succeeded", "failed"}:
+                fields.setdefault("worker_id", "")
+                fields.setdefault("lease_expires_at", "")
             fields = {k: (json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else str(v)) for k, v in fields.items()}
             fields["updated_at"] = datetime.datetime.now().isoformat()
             self.redis.hset(key, mapping=fields)
@@ -826,6 +957,119 @@ class RedisService:
             logger.error(f"获取行程任务失败: {str(e)}")
             return None
     
+    def update_trip(self, user_id: str, trip_id: str, trip_data: Dict[str, Any], expected_version: Optional[int] = None) -> tuple[bool, Optional[str]]:
+        trip_key = self._generate_trip_key(trip_id)
+        user_trips_list_key = self._generate_user_trips_list_key(user_id)
+        versions_key = self._generate_trip_versions_key(trip_id)
+
+        for _ in range(3):
+            pipe = self.redis.pipeline()
+            try:
+                pipe.watch(trip_key, user_trips_list_key, versions_key)
+
+                if not pipe.exists(trip_key):
+                    return False, "not_found"
+                if pipe.zscore(user_trips_list_key, trip_id) is None:
+                    return False, "forbidden"
+
+                old_trip_str = pipe.get(trip_key)
+                old_trip = json.loads(old_trip_str) if old_trip_str else {}
+                current_version = int(old_trip.get("version", 1))
+
+                if expected_version is not None and expected_version != current_version:
+                    return False, "version_conflict"
+
+                now = datetime.datetime.now().isoformat()
+                new_trip_data = dict(trip_data)
+                new_trip_data["id"] = trip_id
+                new_trip_data["created_at"] = old_trip.get("created_at", now)
+                new_trip_data["updated_at"] = now
+                new_trip_data["version"] = current_version + 1
+
+                version_snapshot = {
+                    "version": int(new_trip_data["version"]),
+                    "snapshot_at": now,
+                    "data": new_trip_data,
+                }
+
+                pipe.multi()
+                pipe.set(trip_key, json.dumps(new_trip_data, ensure_ascii=False), ex=365 * 24 * 60 * 60)
+                pipe.lpush(versions_key, json.dumps(version_snapshot, ensure_ascii=False))
+                pipe.ltrim(versions_key, 0, 19)
+                pipe.expire(versions_key, 365 * 24 * 60 * 60)
+                pipe.execute()
+                return True, None
+            except WatchError:
+                continue
+            except Exception as e:
+                logger.error(f"琛岀▼鏇存柊澶辫触: {str(e)}")
+                return False, "internal_error"
+            finally:
+                pipe.reset()
+
+        return False, "version_conflict"
+
+    def rollback_trip(self, user_id: str, trip_id: str, target_version: int) -> tuple[bool, Optional[str]]:
+        trip_key = self._generate_trip_key(trip_id)
+        user_trips_list_key = self._generate_user_trips_list_key(user_id)
+        versions_key = self._generate_trip_versions_key(trip_id)
+
+        for _ in range(3):
+            pipe = self.redis.pipeline()
+            try:
+                pipe.watch(trip_key, user_trips_list_key, versions_key)
+
+                if pipe.zscore(user_trips_list_key, trip_id) is None:
+                    return False, "forbidden"
+
+                current_trip_str = pipe.get(trip_key)
+                if not current_trip_str:
+                    return False, "not_found"
+                current_trip = json.loads(current_trip_str)
+                current_version = int(current_trip.get("version", 1))
+
+                items = pipe.lrange(versions_key, 0, 99)
+                target_snapshot = None
+                for item in items:
+                    parsed = json.loads(item)
+                    if int(parsed.get("version", -1)) == int(target_version):
+                        target_snapshot = parsed
+                        break
+
+                if not target_snapshot:
+                    return False, "version_not_found"
+
+                now = datetime.datetime.now().isoformat()
+                rollback_data = dict(target_snapshot.get("data", {}))
+                rollback_data["id"] = trip_id
+                rollback_data["created_at"] = current_trip.get("created_at", now)
+                rollback_data["updated_at"] = now
+                rollback_data["version"] = current_version + 1
+                rollback_data["rollback_from_version"] = target_version
+
+                new_snapshot = {
+                    "version": rollback_data["version"],
+                    "snapshot_at": now,
+                    "data": rollback_data,
+                }
+
+                pipe.multi()
+                pipe.set(trip_key, json.dumps(rollback_data, ensure_ascii=False), ex=365 * 24 * 60 * 60)
+                pipe.lpush(versions_key, json.dumps(new_snapshot, ensure_ascii=False))
+                pipe.ltrim(versions_key, 0, 19)
+                pipe.expire(versions_key, 365 * 24 * 60 * 60)
+                pipe.execute()
+                return True, None
+            except WatchError:
+                continue
+            except Exception as e:
+                logger.error(f"鍥炴粴琛岀▼澶辫触: {str(e)}")
+                return False, "internal_error"
+            finally:
+                pipe.reset()
+
+        return False, "internal_error"
+
     def close(self):
         """关闭Redis连接"""
         if self._redis_client:
